@@ -14,55 +14,54 @@ import { StandardsView } from './views/StandardsView.js';
 import { UsersView } from './views/UsersView.js';
 import { DashboardView } from './views/DashboardView.js';
 import { AuditView } from './views/AuditView.js';
-import { userService } from './services/UserService.js';
 
 class AmirApp {
   constructor() {
     this.sidebar = null;
     this.topbar = null;
     this.currentView = null;
+    this.loginView = null;
+    this.routerStarted = false;
   }
 
   start() {
-    this.restoreSession();
+    try { localStorage.removeItem('amir2:session'); } catch (e) {}
     bus.on('auth:login', () => this.showApp());
     bus.on('auth:logout', () => this.showLogin());
     this.bindRoutes();
-
-    if (store.get('currentUser')) this.showApp();
-    else this.showLogin();
-  }
-
-  restoreSession() {
-    const raw = localStorage.getItem('amir2:session');
-    if (!raw) return;
-    try {
-      const { userId } = JSON.parse(raw);
-      const user = userService.find(userId);
-      if (user) store.set({ currentUser: user });
-    } catch (e) {}
-    store.subscribe((s) => {
-      if (s.currentUser) localStorage.setItem('amir2:session', JSON.stringify({ userId: s.currentUser.id }));
-      else localStorage.removeItem('amir2:session');
-    });
+    this.showLogin();
   }
 
   showLogin() {
+    store.set({ currentUser: null });
+    if (this.currentView) { try { this.currentView.destroy(); } catch (e) {} this.currentView = null; }
+    if (this.sidebar) { try { this.sidebar.destroy(); } catch (e) {} this.sidebar = null; }
+    if (this.topbar) { try { this.topbar.destroy(); } catch (e) {} this.topbar = null; }
+    if (location.hash && location.hash !== '#/') {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
     document.getElementById('app-shell').hidden = true;
     const loginEl = document.getElementById('login-screen');
     loginEl.hidden = false;
-    const loginView = new LoginView();
-    loginView.mount(loginEl);
+    if (this.loginView) { try { this.loginView.destroy(); } catch (e) {} }
+    this.loginView = new LoginView();
+    this.loginView.mount(loginEl);
   }
 
   showApp() {
+    if (this.loginView) { try { this.loginView.destroy(); } catch (e) {} this.loginView = null; }
     document.getElementById('login-screen').hidden = true;
     document.getElementById('app-shell').hidden = false;
     this.sidebar = new Sidebar();
     this.sidebar.mount(document.getElementById('sidebar'));
     this.topbar = new Topbar();
     this.topbar.mount(document.getElementById('topbar'));
-    router.start();
+    if (!this.routerStarted) {
+      router.start();
+      this.routerStarted = true;
+    } else {
+      router.go('/');
+    }
   }
 
   mountView(ViewClass, props = {}) {

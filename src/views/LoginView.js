@@ -59,8 +59,16 @@ export class LoginView extends Component {
 
   signIn(user) {
     if (!user) return;
-    store.set({ currentUser: user });
-    bus.emit('auth:login', user);
-    Toast.success(`ברוך הבא, ${user.name}`, ROLE_LABELS[user.role]);
+    const card = this.q('.login-card');
+    if (card) {
+      card.style.transition = 'opacity 220ms ease, transform 220ms ease';
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(-8px)';
+    }
+    setTimeout(() => {
+      store.set({ currentUser: user });
+      bus.emit('auth:login', user);
+      Toast.success(`ברוך הבא, ${user.name}`, ROLE_LABELS[user.role]);
+    }, 220);
   }
 }

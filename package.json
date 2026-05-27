@@ -1,0 +1,14 @@
+{
+  "name": "amir-2",
+  "version": "0.1.0",
+  "description": "אמי״ר 2.0 - מערכת לניהול מרחב ייעודי רבנותי",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   IconBoxes, IconBuilding, IconChart, IconAlert, IconScale,
-  IconUsers, IconHistory, IconX,
+  IconHistory, IconX, IconShield,
 } from './Icon';
 import type { ReactNode } from 'react';
 
@@ -16,13 +16,13 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { path: '/dashboard',  label: 'דשבורד ניהולי', icon: <IconChart /> },
-  { path: '/facilities', label: 'מתקנים',         icon: <IconBuilding /> },
-  { path: '/inventory',  label: 'עדכון מלאי',     icon: <IconBoxes /> },
-  { path: '/gaps',       label: 'פערים וחוסרים', icon: <IconAlert /> },
-  { path: '/standards',  label: 'תקנים (חוקה)',  icon: <IconScale /> },
-  { path: '/users',      label: 'משתמשים והרשאות', icon: <IconUsers />, adminOnly: true },
-  { path: '/audit',      label: 'יומן שינויים',  icon: <IconHistory /> },
+  { path: '/dashboard',  label: 'דשבורד ניהולי',   icon: <IconChart /> },
+  { path: '/admin',      label: 'סקירת מנהל',      icon: <IconShield />, adminOnly: true },
+  { path: '/facilities', label: 'מתקנים',           icon: <IconBuilding /> },
+  { path: '/inventory',  label: 'עדכון מלאי',       icon: <IconBoxes /> },
+  { path: '/gaps',       label: 'פערים וחוסרים',   icon: <IconAlert /> },
+  { path: '/standards',  label: 'תקנים (חוקה)',    icon: <IconScale /> },
+  { path: '/audit',      label: 'יומן שינויים',    icon: <IconHistory /> },
 ];
 
 interface Props {

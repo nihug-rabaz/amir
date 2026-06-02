@@ -35,3 +35,17 @@ export function canManageUsers(user: User | null): boolean {
 export function canManageStandards(user: User | null): boolean {
   return user?.role === 'admin';
 }
+
+export function isFieldUser(user: User): boolean {
+  return user.role === 'field_rabbi' || user.role === 'unit_manager';
+}
+
+function scopeSpecificity(user: User): number {
+  const s = user.scope;
+  return (s.command ? 1 : 0) + (s.division ? 1 : 0) + (s.brigade ? 1 : 0) + (s.battalion ? 1 : 0);
+}
+
+export function assignedUsersFor(facility: Facility, users: User[]): User[] {
+  const candidates = users.filter((u) => u.active && isFieldUser(u) && inScope(u, facility));
+  return candidates.sort((a, b) => scopeSpecificity(b) - scopeSpecificity(a));
+}

@@ -5,6 +5,7 @@ import { ROLE_LABELS } from '@/lib/catalog';
 import { IconLogout, IconMenu, IconSearch } from './Icon';
 
 const TITLES: Array<[RegExp, string, string]> = [
+  [/^\/admin/,                    'סקירת מנהל',         'תצוגת על של כל המתקנים והמשתמשים'],
   [/^\/dashboard/,                'דשבורד ניהולי',     'תצוגה כוללת של מצב המרחב הרבנותי'],
   [/^\/facilities\/new/,          'הוספת מתקן חדש',    'מילוי פרטי מתקן צבאי'],
   [/^\/facilities\/[^/]+\/edit/,  'עריכת מתקן',        'עדכון פרטי מתקן צבאי'],
@@ -13,7 +14,6 @@ const TITLES: Array<[RegExp, string, string]> = [
   [/^\/inventory/,                'עדכון מלאי',        'הזנת כמויות והשוואה לתקן'],
   [/^\/gaps/,                     'פערים וחוסרים',     'תצוגת פערים מול תקני רבצ״ר'],
   [/^\/standards/,                'תקנים (חוקה)',      'ניהול תקנים לפי הוראות רבצ״ר'],
-  [/^\/users/,                    'משתמשים והרשאות',   'ניהול משתמשי המערכת'],
   [/^\/audit/,                    'יומן שינויים',      'תיעוד פעולות משתמשים'],
 ];
 

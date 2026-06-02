@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { filterFacilities } from '@/lib/permissions';
-import type { FacilityWithCompliance } from '@/lib/types';
-import { CAMP_TYPES, COMMANDS, FACILITY_STATUS } from '@/lib/catalog';
+import { assignedUsersFor, filterFacilities } from '@/lib/permissions';
+import type { FacilityWithCompliance, User } from '@/lib/types';
+import { CAMP_TYPES, COMMANDS, FACILITY_STATUS, ROLE_LABELS } from '@/lib/catalog';
 import { fmtDate, fmtNumber } from '@/lib/format';
 import { DataTable, type DataColumn } from '@/components/DataTable';
 import { ComplianceCell, StatusPill } from '@/components/StatusPill';
@@ -15,36 +15,50 @@ export default function FacilitiesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [facilities, setFacilities] = useState<FacilityWithCompliance[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/facilities?with=compliance')
-      .then((r) => r.json())
-      .then((j) => setFacilities(j.facilities || []))
+    Promise.all([
+      fetch('/api/facilities?with=compliance').then((r) => r.json()),
+      fetch('/api/users').then((r) => r.json()),
+    ])
+      .then(([f, u]) => {
+        setFacilities(f.facilities || []);
+        setUsers(u.users || []);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const rows = useMemo(() => filterFacilities(user, facilities).map((f) => ({
-    id: f.id,
-    name: f.name,
-    command: f.command,
-    division: f.division || '—',
-    brigade: f.brigade || '—',
-    battalion: f.battalion || '—',
-    campType: f.campType || '—',
-    status: f.status || '—',
-    maxCapacity: f.maxCapacity,
-    updatedAt: f.updatedAt,
-    compliancePct: f.compliance.compliancePct,
-    gaps: f.compliance.totalGap,
-    active: f.active,
-  })), [user, facilities]);
+  const rows = useMemo(() => filterFacilities(user, facilities).map((f) => {
+    const rabbis = assignedUsersFor(f, users);
+    const primary = rabbis[0] || null;
+    return {
+      id: f.id,
+      name: f.name,
+      command: f.command,
+      division: f.division || '—',
+      brigade: f.brigade || '—',
+      battalion: f.battalion || '—',
+      campType: f.campType || '—',
+      status: f.status || '—',
+      maxCapacity: f.maxCapacity,
+      updatedAt: f.updatedAt,
+      compliancePct: f.compliance.compliancePct,
+      gaps: f.compliance.totalGap,
+      active: f.active,
+      rabbiId: primary?.id || '',
+      rabbiName: primary?.name || '',
+      rabbiRole: primary ? ROLE_LABELS[primary.role] : '',
+      extraRabbis: Math.max(0, rabbis.length - 1),
+    };
+  }), [user, facilities, users]);
 
   function exportCsv() {
-    const headers = ['שם מתקן', 'פיקוד', 'אוגדה', 'חטיבה', 'גדוד', 'סוג מחנה', 'סטטוס', 'סד״כ', 'עמידה %', 'חוסרים', 'עדכון'];
+    const headers = ['שם מתקן', 'רב המתקן', 'פיקוד', 'אוגדה', 'חטיבה', 'גדוד', 'סוג מחנה', 'סטטוס', 'סד״כ', 'עמידה %', 'חוסרים', 'עדכון'];
     const lines = [headers.join(',')];
     for (const r of rows) {
-      const cells = [r.name, r.command, r.division, r.brigade, r.battalion, r.campType, r.status, r.maxCapacity, r.compliancePct, r.gaps, fmtDate(r.updatedAt)]
+      const cells = [r.name, r.rabbiName || '— ללא —', r.command, r.division, r.brigade, r.battalion, r.campType, r.status, r.maxCapacity, r.compliancePct, r.gaps, fmtDate(r.updatedAt)]
         .map((c) => {
           const s = String(c ?? '').replace(/"/g, '""');
           return /[",\n]/.test(s) ? `"${s}"` : s;
@@ -61,6 +75,20 @@ export default function FacilitiesPage() {
   }
 
   const columns: DataColumn<typeof rows[number]>[] = [
+    {
+      key: 'rabbiName', label: 'רב המתקן',
+      render: (r) => r.rabbiName ? (
+        <span onClick={(e) => e.stopPropagation()}>
+          {user?.role === 'admin' ? (
+            <Link href={`/admin?user=${encodeURIComponent(r.rabbiId)}`} className="font-bold hover:text-primary">{r.rabbiName}</Link>
+          ) : (
+            <strong>{r.rabbiName}</strong>
+          )}
+          <div className="text-[11px] text-slate-500">{r.rabbiRole}{r.extraRabbis > 0 ? ` · +${r.extraRabbis} נוספים` : ''}</div>
+        </span>
+      ) : <span className="text-xs text-slate-400">— ללא —</span>,
+      sortValue: (r) => r.rabbiName || 'תתת',
+    },
     { key: 'name', label: 'שם המתקן', render: (r) => <span><strong>{r.name}</strong>{!r.active && <span className="badge mr-2">לא פעיל</span>}</span> },
     { key: 'command', label: 'פיקוד' },
     { key: 'division', label: 'אוגדה' },
@@ -101,7 +129,7 @@ export default function FacilitiesPage() {
         <DataTable
           rows={rows}
           columns={columns}
-          searchableFields={['name', 'command', 'division', 'brigade', 'battalion', 'campType']}
+          searchableFields={['name', 'command', 'division', 'brigade', 'battalion', 'campType', 'rabbiName']}
           filters={[
             { key: 'command', label: 'פיקוד', options: COMMANDS.map((c) => ({ value: c, label: c })) },
             { key: 'status',  label: 'סטטוס', options: FACILITY_STATUS.map((s) => ({ value: s, label: s })) },
@@ -109,7 +137,7 @@ export default function FacilitiesPage() {
           ]}
           paginate
           pageSize={12}
-          defaultSort={{ key: 'compliancePct', dir: 'asc' }}
+          defaultSort={{ key: 'rabbiName', dir: 'asc' }}
           onRowClick={(r) => router.push(`/facilities/${r.id}`)}
         />
       )}

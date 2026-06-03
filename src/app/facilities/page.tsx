@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { assignedUsersFor, filterFacilities } from '@/lib/permissions';
 import type { FacilityWithCompliance, User } from '@/lib/types';
@@ -14,6 +14,7 @@ import { IconDownload, IconEdit, IconEye, IconPlus } from '@/components/Icon';
 export default function FacilitiesPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const initialSearch = useSearchParams().get('q') || '';
   const [facilities, setFacilities] = useState<FacilityWithCompliance[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,16 +56,16 @@ export default function FacilitiesPage() {
   }), [user, facilities, users]);
 
   function exportCsv() {
-    const headers = ['שם מתקן', 'רב המתקן', 'פיקוד', 'אוגדה', 'חטיבה', 'גדוד', 'סוג מחנה', 'סטטוס', 'סד״כ', 'עמידה %', 'חוסרים', 'עדכון'];
+    const headers = ['מס׳', 'שם מתקן', 'רב המתקן', 'פיקוד', 'אוגדה', 'חטיבה', 'גדוד', 'סוג מחנה', 'סטטוס', 'סד״כ', 'עמידה %', 'חוסרים', 'עדכון'];
     const lines = [headers.join(',')];
-    for (const r of rows) {
-      const cells = [r.name, r.rabbiName || '— ללא —', r.command, r.division, r.brigade, r.battalion, r.campType, r.status, r.maxCapacity, r.compliancePct, r.gaps, fmtDate(r.updatedAt)]
+    rows.forEach((r, i) => {
+      const cells = [i + 1, r.name, r.rabbiName || '— ללא —', r.command, r.division, r.brigade, r.battalion, r.campType, r.status, r.maxCapacity, r.compliancePct, r.gaps, fmtDate(r.updatedAt)]
         .map((c) => {
           const s = String(c ?? '').replace(/"/g, '""');
           return /[",\n]/.test(s) ? `"${s}"` : s;
         });
       lines.push(cells.join(','));
-    }
+    });
     const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -75,6 +76,10 @@ export default function FacilitiesPage() {
   }
 
   const columns: DataColumn<typeof rows[number]>[] = [
+    {
+      key: '_row', label: '#', sortable: false, width: '54px', center: true,
+      render: (_r, i) => <span className="text-xs text-slate-400 tabular-nums">{i + 1}</span>,
+    },
     {
       key: 'rabbiName', label: 'רב המתקן',
       render: (r) => r.rabbiName ? (
@@ -127,6 +132,7 @@ export default function FacilitiesPage() {
         <div className="card card-padded text-slate-500">טוען…</div>
       ) : (
         <DataTable
+          key={`q-${initialSearch}`}
           rows={rows}
           columns={columns}
           searchableFields={['name', 'command', 'division', 'brigade', 'battalion', 'campType', 'rabbiName']}
@@ -137,6 +143,7 @@ export default function FacilitiesPage() {
           ]}
           paginate
           pageSize={12}
+          initialSearch={initialSearch}
           defaultSort={{ key: 'rabbiName', dir: 'asc' }}
           onRowClick={(r) => router.push(`/facilities/${r.id}`)}
         />

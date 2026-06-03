@@ -8,7 +8,7 @@ export interface DataColumn<T> {
   width?: string;
   center?: boolean;
   sortable?: boolean;
-  render?: (row: T) => ReactNode;
+  render?: (row: T, index: number) => ReactNode;
   sortValue?: (row: T) => string | number;
   cellClass?: string;
 }
@@ -30,11 +30,12 @@ interface DataTableProps<T extends { id: string }> {
   rowClass?: (row: T) => string;
   defaultSort?: { key: string; dir: 'asc' | 'desc' };
   toolbarExtra?: ReactNode;
+  initialSearch?: string;
 }
 
 export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
-  const { rows, columns, searchableFields = [], filters = [], paginate = false, pageSize = 25, onRowClick, rowClass, defaultSort, toolbarExtra } = props;
-  const [search, setSearch] = useState('');
+  const { rows, columns, searchableFields = [], filters = [], paginate = false, pageSize = 25, onRowClick, rowClass, defaultSort, toolbarExtra, initialSearch } = props;
+  const [search, setSearch] = useState(initialSearch ?? '');
   const [filterState, setFilterState] = useState<Record<string, string>>({});
   const [sortKey, setSortKey] = useState<string | null>(defaultSort?.key ?? null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultSort?.dir ?? 'asc');
@@ -138,7 +139,9 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
                 <div className="font-bold text-slate-900">אין רשומות להצגה</div>
                 <div className="text-xs mt-1">נסה לשנות סינון או חיפוש</div>
               </td></tr>
-            ) : pageRows.map((row) => (
+            ) : pageRows.map((row, i) => {
+              const rowIndex = paginate ? (page - 1) * pageSize + i : i;
+              return (
               <tr
                 key={row.id}
                 className={`${onRowClick ? 'clickable' : ''} ${rowClass ? rowClass(row) : ''}`}
@@ -153,11 +156,12 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
                     className={col.cellClass}
                     style={{ textAlign: col.center ? 'center' : undefined }}
                   >
-                    {col.render ? col.render(row) : (row as Record<string, unknown>)[col.key] as ReactNode ?? '—'}
+                    {col.render ? col.render(row, rowIndex) : (row as Record<string, unknown>)[col.key] as ReactNode ?? '—'}
                   </td>
                 ))}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

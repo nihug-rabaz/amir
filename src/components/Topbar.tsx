@@ -2,7 +2,8 @@
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ROLE_LABELS } from '@/lib/catalog';
-import { IconLogout, IconMenu, IconSearch } from './Icon';
+import { IconLogout, IconMenu } from './Icon';
+import { GlobalSearch } from './GlobalSearch';
 
 const TITLES: Array<[RegExp, string, string]> = [
   [/^\/admin/,                    'סקירת מנהל',         'תצוגת על של כל המתקנים והמשתמשים'],
@@ -51,14 +52,7 @@ export function Topbar({ onMenuClick }: Props) {
 
       <div className="hidden lg:block flex-1" />
 
-      <div className="relative w-[320px] max-w-[35vw] hidden md:block">
-        <input
-          type="search"
-          placeholder="חיפוש מתקנים, יחידות, פריטים..."
-          className="w-full pr-10 pl-3.5 py-2 rounded-full border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-600 focus:ring-2 focus:ring-primary-600/15 outline-none transition"
-        />
-        <IconSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-      </div>
+      <GlobalSearch />
 
       <button
         onClick={signOut}

@@ -10,8 +10,14 @@ import { ComplianceCell } from '@/components/StatusPill';
 import { IconAlert, IconBuilding, IconBoxes, IconCheck, IconChart, IconCog, IconScale, IconScroll, IconStar, IconX } from '@/components/Icon';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LabelList,
 } from 'recharts';
+
+function complianceColor(pct: number): string {
+  if (pct >= 90) return '#16a34a';
+  if (pct >= 70) return '#ea7c1d';
+  return '#c53030';
+}
 import Link from 'next/link';
 
 const PIE_COLORS = ['#16a34a', '#ea7c1d', '#94a3b8', '#2563eb', '#7c3aed', '#cbd5e1', '#d4af37', '#0f2a44'];
@@ -149,28 +155,41 @@ export default function DashboardPage() {
         <div className="card card-padded">
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconScale className="text-primary-600" /> אחוז עמידה בתקן לפי פיקוד</h3>
           <div className="h-[260px]">
+            {byCommand.length === 0 ? (
+              <div className="h-full grid place-items-center text-sm text-slate-400">אין נתונים להצגה</div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byCommand} layout="vertical" margin={{ top: 10, right: 10, bottom: 10, left: 60 }}>
-                <XAxis type="number" domain={[0, 100]} />
-                <YAxis type="category" dataKey="command" />
-                <Tooltip />
-                <Bar dataKey="compliance" fill="#1f4d7a" radius={[0, 4, 4, 0]} />
+              <BarChart data={byCommand} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 8 }}>
+                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} fontSize={12} />
+                <YAxis type="category" dataKey="command" width={68} fontSize={12} />
+                <Tooltip formatter={(v: number) => [`${v}%`, 'עמידה ממוצעת']} />
+                <Bar dataKey="compliance" radius={[0, 4, 4, 0]} barSize={22}>
+                  {byCommand.map((d, i) => <Cell key={i} fill={complianceColor(d.compliance)} />)}
+                  <LabelList dataKey="compliance" position="right" formatter={(v: number) => `${v}%`} fontSize={11} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         <div className="card card-padded">
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconAlert className="text-primary-600" /> מספר חוסרים לפי פיקוד</h3>
           <div className="h-[260px]">
+            {byCommand.length === 0 ? (
+              <div className="h-full grid place-items-center text-sm text-slate-400">אין נתונים להצגה</div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byCommand}>
-                <XAxis dataKey="command" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="gaps" fill="#c53030" radius={[4, 4, 0, 0]} />
+              <BarChart data={byCommand} margin={{ top: 18, right: 8, bottom: 4, left: 8 }}>
+                <XAxis dataKey="command" fontSize={12} interval={0} />
+                <YAxis fontSize={12} allowDecimals={false} width={44} />
+                <Tooltip formatter={(v: number) => [fmtNumber(v), 'חוסרים']} />
+                <Bar dataKey="gaps" fill="#c53030" radius={[4, 4, 0, 0]} barSize={40}>
+                  <LabelList dataKey="gaps" position="top" formatter={(v: number) => fmtNumber(v)} fontSize={11} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 

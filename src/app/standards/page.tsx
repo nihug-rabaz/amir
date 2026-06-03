@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
 import { canManageStandards } from '@/lib/permissions';
@@ -12,6 +13,7 @@ export default function StandardsPage() {
   const { user } = useAuth();
   const toast = useToast();
   const canEdit = canManageStandards(user);
+  const itemQuery = (useSearchParams().get('q') || '').trim().toLowerCase();
 
   const [tiers, setTiers] = useState<StandardTier[]>([]);
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -32,8 +34,11 @@ export default function StandardsPage() {
   }, []);
 
   const filteredItems = useMemo(
-    () => items.filter((it) => cat === 'all' || it.category === cat),
-    [items, cat],
+    () => items.filter((it) =>
+      (cat === 'all' || it.category === cat) &&
+      (!itemQuery || it.name.toLowerCase().includes(itemQuery)),
+    ),
+    [items, cat, itemQuery],
   );
 
   function setVal(tierId: string, itemId: string, qty: number) {

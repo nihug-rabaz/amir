@@ -31,3 +31,5 @@ export const IconBook     = (p: IconProps) => <svg {...base(p)}><path d="M4 19.5
 export const IconStar     = (p: IconProps) => <svg {...base(p)} fill="currentColor" strokeWidth={0}><path d="M12 2 15 9l8 .9-6 5.4 2 8.7-7-4-7 4 2-8.7-6-5.4L9 9z"/></svg>;
 export const IconScroll   = (p: IconProps) => <svg {...base(p)}><path d="M19 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14M19 6v12M19 6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2"/><path d="M8 9h6M8 13h6"/></svg>;
 export const IconMenu     = (p: IconProps) => <svg {...base(p)}><path d="M3 12h18M3 6h18M3 18h18"/></svg>;
+export const IconExpand   = (p: IconProps) => <svg {...base(p)}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>;
+export const IconShrink   = (p: IconProps) => <svg {...base(p)}><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>;

@@ -4,10 +4,13 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
 import { filterFacilities } from '@/lib/permissions';
-import type { Facility, FacilityWithCompliance, InventoryItem, StandardTier } from '@/lib/types';
+import type { Facility, FacilityFields, FacilityWithCompliance, InventoryItem, StandardTier } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
+import { FIELD_GROUPS } from '@/lib/facilityFieldGroups';
 import { fmtNumber } from '@/lib/format';
 import { GapStatusBadge } from '@/components/StatusPill';
+import { SearchSelect } from '@/components/SearchSelect';
+import { FacilityFieldsEditor } from '@/components/facility/FacilityFieldsEditor';
 import { IconBoxes, IconCheck, IconX } from '@/components/Icon';
 
 export default function InventoryPage() {
@@ -22,8 +25,12 @@ export default function InventoryPage() {
   const [standards, setStandards] = useState<Record<string, Record<string, number>>>({});
   const [selectedId, setSelectedId] = useState<string | null>(initialId);
   const [draft, setDraft] = useState<Record<string, number>>({});
+  const [fieldsDraft, setFieldsDraft] = useState<FacilityFields>({});
+  const [fieldsDirty, setFieldsDirty] = useState(false);
   const [cat, setCat] = useState<string>('all');
   const [saving, setSaving] = useState(false);
+
+  const isFieldCat = cat !== 'all' && !!FIELD_GROUPS[cat];
 
   useEffect(() => {
     Promise.all([
@@ -48,6 +55,17 @@ export default function InventoryPage() {
     if (!selectedId) { setDraft({}); return; }
     fetch(`/api/facilities/${selectedId}/inventory`).then((r) => r.json()).then((j) => setDraft(j.inventory || {}));
   }, [selectedId]);
+
+  useEffect(() => {
+    const f = facilities.find((x) => x.id === selectedId);
+    setFieldsDraft(f?.fields ? { ...f.fields } : {});
+    setFieldsDirty(false);
+  }, [selectedId, facilities]);
+
+  function setFieldVal(key: keyof FacilityFields, value: string | number | boolean) {
+    setFieldsDraft((d) => ({ ...d, [key]: value }));
+    setFieldsDirty(true);
+  }
 
   function rowsForCategory(c: string) {
     const std = tier ? (standards[tier.id] || {}) : {};
@@ -85,7 +103,19 @@ export default function InventoryPage() {
       });
       const j = await r.json();
       if (j.error) throw new Error(j.error);
-      toast.success('המלאי נשמר', 'הנתונים עודכנו ותועדו ביומן');
+
+      if (fieldsDirty) {
+        const rf = await fetch(`/api/facilities/${selectedId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ facility: { fields: fieldsDraft }, actor: user }),
+        });
+        const jf = await rf.json();
+        if (jf.error) throw new Error(jf.error);
+        setFacilities((prev) => prev.map((f) => (f.id === selectedId ? { ...f, fields: { ...fieldsDraft } } : f)));
+        setFieldsDirty(false);
+      }
+      toast.success('הנתונים נשמרו', 'המלאי והפרטים עודכנו ותועדו ביומן');
     } catch (e) {
       toast.danger('שגיאה בשמירה', (e as Error).message);
     } finally {
@@ -100,16 +130,24 @@ export default function InventoryPage() {
           <h1 className="text-xl sm:text-2xl font-extrabold m-0">עדכון מלאי</h1>
           <div className="text-sm text-slate-500 mt-1">בחר מתקן, הזן כמויות מעודכנות והשווה לתקן רבצ״ר</div>
         </div>
+        {selected && (
+          <button onClick={save} disabled={saving} className="btn btn-primary">
+            <IconCheck /> {saving ? 'שומר...' : 'שמירת מלאי'}
+          </button>
+        )}
       </div>
 
       <div className="card card-padded">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="label">בחר מתקן</label>
-            <select className="input mt-1" value={selectedId || ''} onChange={(e) => setSelectedId(e.target.value || null)}>
-              <option value="">— בחר מתקן —</option>
-              {visible.map((f) => <option key={f.id} value={f.id}>{f.name} · {f.command}</option>)}
-            </select>
+            <SearchSelect
+              options={visible.map((f) => ({ value: f.id, label: f.name, sub: f.command }))}
+              value={selectedId}
+              onChange={setSelectedId}
+              placeholder="חפש מתקן לפי שם..."
+              emptyText="לא נמצא מתקן תואם"
+            />
           </div>
           {selected && (
             <>
@@ -141,6 +179,9 @@ export default function InventoryPage() {
             ))}
           </div>
 
+          {isFieldCat ? (
+            <FacilityFieldsEditor group={cat} fields={fieldsDraft} onChange={setFieldVal} />
+          ) : (
           <div className="space-y-3">
             {Object.entries(grouped).map(([cKey, rows]) => (
               <div key={cKey} className="card overflow-hidden">
@@ -183,10 +224,11 @@ export default function InventoryPage() {
               </div>
             ))}
           </div>
+          )}
 
           <div className="flex gap-2 justify-end pt-3 border-t border-slate-200">
             <button onClick={() => setSelectedId(selectedId)} className="btn btn-ghost"><IconX /> ביטול</button>
-            <button onClick={save} disabled={saving} className="btn btn-primary"><IconCheck /> {saving ? 'שומר...' : 'שמירת מלאי'}</button>
+            <button onClick={save} disabled={saving} className="btn btn-primary"><IconCheck /> {saving ? 'שומר...' : 'שמירת'}</button>
           </div>
         </>
       )}

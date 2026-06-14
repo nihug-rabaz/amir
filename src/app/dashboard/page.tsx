@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useFullscreen } from '@/lib/fullscreen-context';
 import { filterFacilities } from '@/lib/permissions';
 import type { FacilityWithCompliance } from '@/lib/types';
 import { COMMANDS, ITEM_CATEGORIES, ROLE_LABELS } from '@/lib/catalog';
 import { fmtNumber } from '@/lib/format';
 import { Kpi } from '@/components/Kpi';
 import { ComplianceCell } from '@/components/StatusPill';
-import { IconAlert, IconBuilding, IconBoxes, IconCheck, IconChart, IconCog, IconScale, IconScroll, IconStar, IconX } from '@/components/Icon';
+import { IconAlert, IconBuilding, IconBoxes, IconCheck, IconChart, IconCog, IconExpand, IconScale, IconScroll, IconShrink, IconStar, IconX } from '@/components/Icon';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LabelList,
@@ -24,6 +25,7 @@ const PIE_COLORS = ['#16a34a', '#ea7c1d', '#94a3b8', '#2563eb', '#7c3aed', '#cbd
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { fullscreen, setFullscreen } = useFullscreen();
   const [data, setData] = useState<FacilityWithCompliance[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -117,6 +119,11 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {fullscreen ? (
+            <button onClick={() => setFullscreen(false)} className="btn btn-ghost"><IconShrink /> יציאה מתצוגה מלאה</button>
+          ) : (
+            <button onClick={() => setFullscreen(true)} className="btn btn-ghost"><IconExpand /> תצוגה מלאה</button>
+          )}
           <Link href="/facilities" className="btn btn-ghost"><IconBuilding /> מתקנים</Link>
           <Link href="/facilities/new" className="btn btn-primary"><IconBuilding /> הוספת מתקן</Link>
         </div>

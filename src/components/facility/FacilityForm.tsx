@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Facility, FacilityFields, InventoryItem, StandardTier, User } from '@/lib/types';
 import {
@@ -10,6 +10,7 @@ import { fmtNumber } from '@/lib/format';
 import { useToast } from '@/lib/toast';
 import { IconBack, IconBoxes, IconCheck } from '@/components/Icon';
 import { GapStatusBadge } from '@/components/StatusPill';
+import { Field, NumField, Check } from './fieldControls';
 
 type Tab = 'details' | 'kitchen' | 'eruv' | 'mezuzot' | 'synagogue' | 'contents' | 'inventory';
 
@@ -503,32 +504,3 @@ function InventoryEditor({ grouped, tierLabel, empty, inventory, setQty }: Inven
   );
 }
 
-function Field({ label, req, error, children }: { label: string; req?: boolean; error?: string; children: ReactNode }) {
-  return (
-    <div>
-      {label && <label className="label">{label} {req && <span className="req">*</span>}</label>}
-      <div className="mt-1">{children}</div>
-      {error && <div className="text-[11px] text-bad mt-1">{error}</div>}
-    </div>
-  );
-}
-
-function NumField({ label, val, set, error }: { label: string; val: number | undefined; set: (v: number) => void; error?: string }) {
-  return (
-    <Field label={label} error={error}>
-      <input type="number" min={0} className="input" value={val ?? 0} onChange={(e) => set(Math.max(0, Number(e.target.value) || 0))} />
-    </Field>
-  );
-}
-
-function Check({ label, val, set }: { label: string; val: boolean; set: (v: boolean) => void }) {
-  return (
-    <div>
-      <label className="label opacity-0 select-none">·</label>
-      <label className="flex items-center gap-2 mt-1 px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 transition">
-        <input type="checkbox" checked={val} onChange={(e) => set(e.target.checked)} />
-        <span className="text-sm font-medium">{label}</span>
-      </label>
-    </div>
-  );
-}

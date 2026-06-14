@@ -213,15 +213,23 @@ export class FacilityRepo {
     });
     return next;
   }
+  // Persists the whole inventory in one batched upsert to avoid per-item round-trips that time out on edge.
   static async saveInventory(facilityId: string, inventory: Record<string, number>, actor: User | null): Promise<void> {
     const fac = await this.find(facilityId);
     if (!fac) return;
     const updatedBy = actor?.name || fac.updatedBy || 'מערכת';
-    const entries = Object.entries(inventory).filter(([itemId]) => itemId);
-    for (const [itemId, qty] of entries) {
+    const itemIds: string[] = [];
+    const quantities: number[] = [];
+    for (const [itemId, qty] of Object.entries(inventory)) {
+      if (!itemId) continue;
+      itemIds.push(itemId);
+      quantities.push(Math.max(0, Math.round(Number(qty) || 0)));
+    }
+    if (itemIds.length > 0) {
       await sql()`
         INSERT INTO facility_inventory (facility_id, item_id, quantity, updated_by, updated_at)
-        VALUES (${facilityId}, ${itemId}, ${qty}, ${updatedBy}, NOW())
+        SELECT ${facilityId}, t.item_id, t.qty, ${updatedBy}, NOW()
+        FROM unnest(${itemIds}::text[], ${quantities}::int[]) AS t(item_id, qty)
         ON CONFLICT (facility_id, item_id) DO UPDATE SET
           quantity = EXCLUDED.quantity,
           updated_by = EXCLUDED.updated_by,

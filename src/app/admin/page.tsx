@@ -1,21 +1,24 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast';
 import { assignedUsersFor, filterFacilities, isFieldUser } from '@/lib/permissions';
 import { ROLE_LABELS, ITEM_CATEGORIES } from '@/lib/catalog';
 import { fmtDate, fmtNumber } from '@/lib/format';
 import type { FacilityWithCompliance, User } from '@/lib/types';
 import { Kpi } from '@/components/Kpi';
 import { ComplianceCell, StatusPill } from '@/components/StatusPill';
+import { UserFormModal } from '@/components/admin/UserFormModal';
 import {
   IconAlert, IconBoxes, IconBuilding, IconCheck,
-  IconEdit, IconEye, IconScale, IconSearch, IconShield, IconUsers, IconX,
+  IconEdit, IconEye, IconPlus, IconScale, IconSearch, IconShield, IconUsers, IconX,
 } from '@/components/Icon';
 
 export default function AdminOverviewPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const params = useSearchParams();
   const initialUserId = params.get('user');
@@ -23,8 +26,15 @@ export default function AdminOverviewPage() {
   const [facilities, setFacilities] = useState<FacilityWithCompliance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(initialUserId);
+  const [manageMode, setManageMode] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [search, setSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const reloadUsers = useCallback(() => {
+    return fetch('/api/users').then((r) => r.json()).then((u) => setUsers(u.users || []));
+  }, []);
 
   useEffect(() => {
     if (user?.role !== 'admin') return;
@@ -42,8 +52,43 @@ export default function AdminOverviewPage() {
 
   function selectUser(id: string | null) {
     setSelectedUserId(id);
+    setManageMode(false);
     const url = id ? `/admin?user=${encodeURIComponent(id)}` : '/admin';
     router.replace(url, { scroll: false });
+  }
+
+  function openAddUser() {
+    setEditingUser(null);
+    setFormOpen(true);
+  }
+
+  function openEditUser(u: User) {
+    setEditingUser(u);
+    setFormOpen(true);
+  }
+
+  function handleSaved(saved: User) {
+    setFormOpen(false);
+    reloadUsers();
+    toast.success(editingUser ? 'המשתמש עודכן' : 'המשתמש נוסף', saved.name);
+  }
+
+  async function handleDelete(u: User) {
+    if (!window.confirm(`למחוק את המשתמש "${u.name}"? פעולה זו אינה הפיכה.`)) return;
+    try {
+      const r = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: u.id }),
+      });
+      const j = await r.json();
+      if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+      if (selectedUserId === u.id) selectUser(null);
+      reloadUsers();
+      toast.success('המשתמש נמחק', u.name);
+    } catch (e) {
+      toast.danger('שגיאה במחיקה', (e as Error).message);
+    }
   }
 
   const selectedUser = useMemo(
@@ -83,12 +128,17 @@ export default function AdminOverviewPage() {
             תצוגה מלאה של כל המתקנים, המשתמשים המשויכים והפערים — שלום {user?.name}
           </div>
         </div>
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="lg:hidden btn btn-ghost"
-        >
-          <IconUsers /> רשימת משתמשים
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openAddUser} className="btn btn-primary">
+            <IconPlus size={16} /> הוספת משתמש
+          </button>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="lg:hidden btn btn-ghost"
+          >
+            <IconUsers /> רשימת משתמשים
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
@@ -96,9 +146,11 @@ export default function AdminOverviewPage() {
           <UserPanel
             users={filteredUsers}
             selectedUserId={selectedUserId}
+            manageMode={manageMode}
             search={search}
             setSearch={setSearch}
             onSelect={selectUser}
+            onManage={() => { setSelectedUserId(null); setManageMode(true); }}
           />
         </aside>
 
@@ -113,9 +165,11 @@ export default function AdminOverviewPage() {
               <UserPanel
                 users={filteredUsers}
                 selectedUserId={selectedUserId}
+                manageMode={manageMode}
                 search={search}
                 setSearch={setSearch}
                 onSelect={(id) => { selectUser(id); setDrawerOpen(false); }}
+                onManage={() => { setSelectedUserId(null); setManageMode(true); setDrawerOpen(false); }}
               />
             </aside>
           </>
@@ -124,13 +178,30 @@ export default function AdminOverviewPage() {
         <section className="space-y-4 min-w-0">
           {loading ? (
             <div className="card card-padded text-slate-500">טוען נתונים…</div>
+          ) : manageMode ? (
+            <ManageUsersView
+              users={filteredUsers}
+              facilities={facilities}
+              onAdd={openAddUser}
+              onEdit={openEditUser}
+              onDelete={handleDelete}
+              onOpenSummary={(id) => selectUser(id)}
+            />
           ) : selectedUser ? (
-            <UserSummary user={selectedUser} facilities={facilities} users={users} onClear={() => selectUser(null)} />
+            <UserSummary user={selectedUser} facilities={facilities} users={users} onEdit={() => openEditUser(selectedUser)} onClear={() => selectUser(null)} />
           ) : (
             <AllFacilitiesView facilities={facilities} users={users} />
           )}
         </section>
       </div>
+
+      <UserFormModal
+        open={formOpen}
+        initial={editingUser}
+        onClose={() => setFormOpen(false)}
+        onSaved={handleSaved}
+        onError={(m) => toast.danger('שגיאה', m)}
+      />
     </div>
   );
 }
@@ -138,12 +209,14 @@ export default function AdminOverviewPage() {
 interface UserPanelProps {
   users: User[];
   selectedUserId: string | null;
+  manageMode: boolean;
   search: string;
   setSearch: (v: string) => void;
   onSelect: (id: string | null) => void;
+  onManage: () => void;
 }
 
-function UserPanel({ users, selectedUserId, search, setSearch, onSelect }: UserPanelProps) {
+function UserPanel({ users, selectedUserId, manageMode, search, setSearch, onSelect, onManage }: UserPanelProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-soft overflow-hidden lg:sticky lg:top-[80px]">
       <div className="p-3 border-b border-slate-200 bg-slate-50">
@@ -166,7 +239,7 @@ function UserPanel({ users, selectedUserId, search, setSearch, onSelect }: UserP
       <button
         onClick={() => onSelect(null)}
         className={`w-full text-right px-3 py-2.5 border-b border-slate-100 text-sm transition ${
-          selectedUserId === null ? 'bg-primary/5 text-primary font-bold' : 'hover:bg-slate-50'
+          selectedUserId === null && !manageMode ? 'bg-primary/5 text-primary font-bold' : 'hover:bg-slate-50'
         }`}
       >
         <div className="flex items-center gap-2">
@@ -174,6 +247,21 @@ function UserPanel({ users, selectedUserId, search, setSearch, onSelect }: UserP
           <div className="flex-1">
             <div className="font-bold">כל המתקנים</div>
             <div className="text-xs text-slate-500">תצוגת על של כלל המערכת</div>
+          </div>
+        </div>
+      </button>
+
+      <button
+        onClick={onManage}
+        className={`w-full text-right px-3 py-2.5 border-b border-slate-100 text-sm transition ${
+          manageMode ? 'bg-primary/5 text-primary font-bold' : 'hover:bg-slate-50'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <IconShield size={16} />
+          <div className="flex-1">
+            <div className="font-bold">ניהול משתמשים והרשאות</div>
+            <div className="text-xs text-slate-500">הוספה, עריכה ומחיקה</div>
           </div>
         </div>
       </button>
@@ -204,6 +292,72 @@ function UserPanel({ users, selectedUserId, search, setSearch, onSelect }: UserP
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+interface ManageUsersProps {
+  users: User[];
+  facilities: FacilityWithCompliance[];
+  onAdd: () => void;
+  onEdit: (u: User) => void;
+  onDelete: (u: User) => void;
+  onOpenSummary: (id: string) => void;
+}
+
+function ManageUsersView({ users, facilities, onAdd, onEdit, onDelete, onOpenSummary }: ManageUsersProps) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+        <strong className="flex items-center gap-1.5"><IconShield size={16} /> ניהול משתמשים והרשאות</strong>
+        <button onClick={onAdd} className="btn btn-sm btn-primary"><IconPlus size={14} /> משתמש חדש</button>
+      </div>
+      <div className="overflow-x-auto scrollbar-thin">
+        <table className="data-table min-w-[820px]">
+          <thead>
+            <tr>
+              <th>שם מלא</th>
+              <th>ת״ז</th>
+              <th>תפקיד / הרשאה</th>
+              <th>תחום אחריות</th>
+              <th className="text-center">מתקנים</th>
+              <th>סטטוס</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-8 text-slate-500">לא נמצאו משתמשים</td></tr>
+            ) : users.map((u) => {
+              const scopeLabel = [u.scope.command, u.scope.division, u.scope.brigade, u.scope.battalion]
+                .filter(Boolean).join(' / ') || 'כל המערכת';
+              const count = filterFacilities(u, facilities).length;
+              return (
+                <tr key={u.id}>
+                  <td>
+                    <button onClick={() => onOpenSummary(u.id)} className="font-bold hover:text-primary text-right">{u.name}</button>
+                  </td>
+                  <td className="font-num text-sm">{u.personalId}</td>
+                  <td className="text-sm">{ROLE_LABELS[u.role]}</td>
+                  <td className="text-xs text-slate-600">{scopeLabel}</td>
+                  <td className="text-center font-num">{fmtNumber(count)}</td>
+                  <td>
+                    {u.active
+                      ? <span className="badge badge-ok">פעיל</span>
+                      : <span className="badge">לא פעיל</span>}
+                  </td>
+                  <td>
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => onEdit(u)} className="btn btn-sm btn-ghost" title="עריכה"><IconEdit size={14} /></button>
+                      <button onClick={() => onDelete(u)} className="btn btn-sm btn-ghost text-bad" title="מחיקה"><IconX size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -307,7 +461,7 @@ function AllFacilitiesView({ facilities, users }: { facilities: FacilityWithComp
   );
 }
 
-function UserSummary({ user, facilities, users, onClear }: { user: User; facilities: FacilityWithCompliance[]; users: User[]; onClear: () => void }) {
+function UserSummary({ user, facilities, users, onEdit, onClear }: { user: User; facilities: FacilityWithCompliance[]; users: User[]; onEdit: () => void; onClear: () => void }) {
   const assigned = useMemo(() => filterFacilities(user, facilities), [user, facilities]);
 
   const stats = useMemo(() => {
@@ -356,15 +510,20 @@ function UserSummary({ user, facilities, users, onClear }: { user: User; facilit
             <div className="min-w-0">
               <h2 className="text-lg sm:text-xl font-extrabold m-0 truncate">{user.name}</h2>
               <div className="text-xs sm:text-sm opacity-80 mt-0.5">
-                {ROLE_LABELS[user.role]} · מספר אישי {user.personalId}
+                {ROLE_LABELS[user.role]} · ת״ז {user.personalId}
                 {!user.active && <span className="mr-2 badge bg-white/20 text-white border-0">לא פעיל</span>}
               </div>
               <div className="text-xs opacity-70 mt-0.5">תחום אחריות: {scopeLabel}</div>
             </div>
           </div>
-          <button onClick={onClear} className="btn btn-ghost text-white border-white/20 bg-white/10 hover:bg-white/20">
-            <IconX size={14} /> חזרה לכל המתקנים
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={onEdit} className="btn btn-ghost text-white border-white/20 bg-white/10 hover:bg-white/20">
+              <IconEdit size={14} /> עריכת משתמש
+            </button>
+            <button onClick={onClear} className="btn btn-ghost text-white border-white/20 bg-white/10 hover:bg-white/20">
+              <IconX size={14} /> חזרה לכל המתקנים
+            </button>
+          </div>
         </div>
       </div>
 

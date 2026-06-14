@@ -93,6 +93,9 @@ export class UserRepo {
     `;
     return { ...u, id };
   }
+  static async delete(id: string): Promise<void> {
+    await sql()`DELETE FROM users WHERE id = ${id}`;
+  }
 }
 
 export class ItemRepo {

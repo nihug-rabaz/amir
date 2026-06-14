@@ -15,7 +15,7 @@ export class LoginView extends Component {
         <div class="login-sub">ארגון מרחב ייעודי רבנותי · התחברות מאובטחת</div>
 
         <div class="form-group" style="margin-top:24px;">
-          <label>מספר אישי / ת״ז</label>
+          <label>ת״ז</label>
           <input class="form-control" data-login-id placeholder="לדוגמה: 1101234" autocomplete="off" />
         </div>
         <div class="form-group" style="margin-top:12px;">
@@ -50,7 +50,7 @@ export class LoginView extends Component {
     });
     this.on('[data-login]', 'click', () => {
       const id = this.q('[data-login-id]').value.trim();
-      if (!id) return Toast.danger('שגיאת התחברות', 'יש להזין מספר אישי / ת״ז');
+      if (!id) return Toast.danger('שגיאת התחברות', 'יש להזין ת״ז');
       const user = userService.all().find(u => u.personalId === id);
       if (!user) return Toast.danger('משתמש לא נמצא', 'בחר מהרשימה למטה לצורך הדגמה');
       this.signIn(user);

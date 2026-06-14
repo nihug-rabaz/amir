@@ -45,7 +45,7 @@ export class UsersView extends Component {
       ],
       columns: [
         { key: 'name', label: 'שם', render: r => `<strong>${escapeHtml(r.name)}</strong>` },
-        { key: 'personalId', label: 'מספר אישי' },
+        { key: 'personalId', label: 'ת״ז' },
         { key: 'roleLabel', label: 'תפקיד' },
         { key: 'scopeLabel', label: 'תחום אחריות' },
         { key: 'active', label: 'סטטוס', render: r => r.active ? '<span class="badge badge-success">פעיל</span>' : '<span class="badge badge-neutral">לא פעיל</span>' },
@@ -72,7 +72,7 @@ export class UsersView extends Component {
     body.innerHTML = `
       <div class="form-grid">
         <div class="form-group"><label>שם מלא <span class="req">*</span></label><input class="form-control" data-u-name value="${escapeHtml(user.name)}" /></div>
-        <div class="form-group"><label>מספר אישי / ת״ז <span class="req">*</span></label><input class="form-control" data-u-id value="${escapeHtml(user.personalId)}" /></div>
+        <div class="form-group"><label>ת״ז <span class="req">*</span></label><input class="form-control" data-u-id value="${escapeHtml(user.personalId)}" /></div>
         <div class="form-group"><label>תפקיד</label>
           <select class="form-control" data-u-role>
             ${Object.entries(ROLE_LABELS).map(([v, l]) => `<option value="${v}" ${user.role === v ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('')}
@@ -108,7 +108,7 @@ export class UsersView extends Component {
     modalEl.querySelector('[data-modal-save]').addEventListener('click', () => {
       const name = body.querySelector('[data-u-name]').value.trim();
       const personalId = body.querySelector('[data-u-id]').value.trim();
-      if (!name || !personalId) return Toast.danger('שגיאה', 'יש למלא שם ומספר אישי');
+      if (!name || !personalId) return Toast.danger('שגיאה', 'יש למלא שם ות״ז');
       const updated = {
         ...user,
         name, personalId,

@@ -22,3 +22,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { id } = await req.json() as { id?: string };
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    await UserRepo.delete(id);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
+}

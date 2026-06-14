@@ -154,14 +154,22 @@ export default function DashboardPage() {
 
         <div className="card card-padded">
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconScale className="text-primary-600" /> אחוז עמידה בתקן לפי פיקוד</h3>
-          <div className="h-[260px]">
+          <div className="h-[260px]" dir="ltr">
             {byCommand.length === 0 ? (
               <div className="h-full grid place-items-center text-sm text-slate-400">אין נתונים להצגה</div>
             ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byCommand} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 8 }}>
+              <BarChart data={byCommand} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 8 }}>
                 <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} fontSize={12} />
-                <YAxis type="category" dataKey="command" width={68} fontSize={12} />
+                <YAxis
+                  type="category"
+                  dataKey="command"
+                  width={96}
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                />
                 <Tooltip formatter={(v: number) => [`${v}%`, 'עמידה ממוצעת']} />
                 <Bar dataKey="compliance" radius={[0, 4, 4, 0]} barSize={22}>
                   {byCommand.map((d, i) => <Cell key={i} fill={complianceColor(d.compliance)} />)}
@@ -175,7 +183,7 @@ export default function DashboardPage() {
 
         <div className="card card-padded">
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconAlert className="text-primary-600" /> מספר חוסרים לפי פיקוד</h3>
-          <div className="h-[260px]">
+          <div className="h-[260px]" dir="ltr">
             {byCommand.length === 0 ? (
               <div className="h-full grid place-items-center text-sm text-slate-400">אין נתונים להצגה</div>
             ) : (

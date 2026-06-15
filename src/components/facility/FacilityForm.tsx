@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import type { Facility, FacilityFields, InventoryItem, StandardTier, User } from '@/lib/types';
 import {
   COMMANDS, CAMP_TYPES, FACILITY_STATUS, PROJECT_TYPES, ITEM_CATEGORIES,
-  divisionsFor, brigadesFor, battalionsFor,
 } from '@/lib/catalog';
+import { divisionOptions, brigadeOptions, battalionOptions } from '@/lib/scopeOptions';
 import { fmtNumber } from '@/lib/format';
 import { useToast } from '@/lib/toast';
 import { IconBack, IconBoxes, IconCheck } from '@/components/Icon';
@@ -93,10 +93,11 @@ export function FacilityForm({ mode, initial, actor }: Props) {
   const [tiers, setTiers] = useState<StandardTier[]>([]);
   const [standards, setStandards] = useState<Record<string, Record<string, number>>>({});
   const [inventory, setInventory] = useState<Record<string, number>>({});
+  const [facilities, setFacilities] = useState<Facility[]>([]);
 
-  const divisions = useMemo(() => divisionsFor(form.command), [form.command]);
-  const brigades = useMemo(() => brigadesFor(form.division), [form.division]);
-  const battalions = useMemo(() => battalionsFor(form.brigade), [form.brigade]);
+  const divisions = useMemo(() => divisionOptions(facilities, form.command), [facilities, form.command]);
+  const brigades = useMemo(() => brigadeOptions(facilities, form.command, form.division), [facilities, form.command, form.division]);
+  const battalions = useMemo(() => battalionOptions(facilities, form.command, form.division, form.brigade), [facilities, form.command, form.division, form.brigade]);
 
   const tier = useMemo(() => {
     if (!tiers.length) return null;
@@ -113,6 +114,13 @@ export function FacilityForm({ mode, initial, actor }: Props) {
       })
       .catch(() => toast.danger('שגיאה', 'לא ניתן לטעון תקנים'));
   }, [toast]);
+
+  useEffect(() => {
+    fetch('/api/facilities')
+      .then((r) => r.json())
+      .then((j) => setFacilities(j.facilities || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (mode !== 'edit' || !initial?.id) return;
@@ -136,7 +144,6 @@ export function FacilityForm({ mode, initial, actor }: Props) {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'שדה חובה';
     if (!form.command) e.command = 'שדה חובה';
-    if (!form.campType) e.campType = 'שדה חובה';
     if (!form.status) e.status = 'שדה חובה';
     if (form.maxCapacity < 0) e.maxCapacity = 'חייב להיות מספר חיובי';
     setErrors(e);
@@ -276,7 +283,7 @@ export function FacilityForm({ mode, initial, actor }: Props) {
               </select>
             </Field>
             <Field label="אוגדה">
-              <select className="input" value={form.division} disabled={!form.command} onChange={(e) => {
+              <select className="input" value={form.division} onChange={(e) => {
                 const division = e.target.value;
                 setForm((f) => ({ ...f, division, brigade: '', battalion: '' }));
               }}>
@@ -285,7 +292,7 @@ export function FacilityForm({ mode, initial, actor }: Props) {
               </select>
             </Field>
             <Field label="חטיבה">
-              <select className="input" value={form.brigade} disabled={!form.division} onChange={(e) => {
+              <select className="input" value={form.brigade} onChange={(e) => {
                 const brigade = e.target.value;
                 setForm((f) => ({ ...f, brigade, battalion: '' }));
               }}>
@@ -294,12 +301,12 @@ export function FacilityForm({ mode, initial, actor }: Props) {
               </select>
             </Field>
             <Field label="גדוד">
-              <select className="input" value={form.battalion} disabled={!form.brigade} onChange={(e) => update('battalion', e.target.value)}>
+              <select className="input" value={form.battalion} onChange={(e) => update('battalion', e.target.value)}>
                 <option value="">— בחר —</option>
                 {battalions.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             </Field>
-            <Field label="סוג מחנה" req error={errors.campType}>
+            <Field label="סוג מחנה">
               <select className="input" value={form.campType} onChange={(e) => update('campType', e.target.value)}>
                 <option value="">— בחר —</option>
                 {CAMP_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}

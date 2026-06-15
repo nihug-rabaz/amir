@@ -1,9 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import type { Role, User } from '@/lib/types';
-import {
-  COMMANDS, ROLE_LABELS, divisionsFor, brigadesFor, battalionsFor,
-} from '@/lib/catalog';
+import type { Facility, Role, User } from '@/lib/types';
+import { ROLE_LABELS } from '@/lib/catalog';
+import { commandOptions, divisionOptions, brigadeOptions, battalionOptions } from '@/lib/scopeOptions';
 import { uid } from '@/lib/format';
 import { Modal } from '@/components/Modal';
 import { IconCheck } from '@/components/Icon';
@@ -11,6 +10,7 @@ import { IconCheck } from '@/components/Icon';
 interface Props {
   open: boolean;
   initial?: User | null;
+  facilities?: Pick<Facility, 'command' | 'division' | 'brigade' | 'battalion'>[];
   onClose: () => void;
   onSaved: (user: User) => void;
   onError: (message: string) => void;
@@ -32,7 +32,7 @@ function blank(): User {
   };
 }
 
-export function UserFormModal({ open, initial, onClose, onSaved, onError }: Props) {
+export function UserFormModal({ open, initial, facilities = [], onClose, onSaved, onError }: Props) {
   const [form, setForm] = useState<User>(() => initial ? { ...initial } : blank());
   const [saving, setSaving] = useState(false);
 
@@ -41,9 +41,10 @@ export function UserFormModal({ open, initial, onClose, onSaved, onError }: Prop
     if (open) setForm(initial ? { ...initial, scope: { ...initial.scope } } : blank());
   }, [open, initial]);
 
-  const divisions = useMemo(() => divisionsFor(form.scope.command), [form.scope.command]);
-  const brigades = useMemo(() => brigadesFor(form.scope.division), [form.scope.division]);
-  const battalions = useMemo(() => battalionsFor(form.scope.brigade), [form.scope.brigade]);
+  const commands = useMemo(() => commandOptions(facilities), [facilities]);
+  const divisions = useMemo(() => divisionOptions(facilities, form.scope.command), [facilities, form.scope.command]);
+  const brigades = useMemo(() => brigadeOptions(facilities, form.scope.command, form.scope.division), [facilities, form.scope.command, form.scope.division]);
+  const battalions = useMemo(() => battalionOptions(facilities, form.scope.command, form.scope.division, form.scope.brigade), [facilities, form.scope.command, form.scope.division, form.scope.brigade]);
 
   function setField<K extends keyof User>(key: K, value: User[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -141,26 +142,26 @@ export function UserFormModal({ open, initial, onClose, onSaved, onError }: Prop
             <label className={labelCls}>פיקוד</label>
             <select className={inputCls} value={form.scope.command || ''} onChange={(e) => setScope('command', e.target.value)}>
               <option value="">— כל הפיקודים —</option>
-              {COMMANDS.map((c) => <option key={c} value={c}>{c}</option>)}
+              {commands.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className={labelCls}>אוגדה</label>
-            <select className={inputCls} value={form.scope.division || ''} onChange={(e) => setScope('division', e.target.value)} disabled={!form.scope.command}>
+            <select className={inputCls} value={form.scope.division || ''} onChange={(e) => setScope('division', e.target.value)}>
               <option value="">— כל האוגדות —</option>
               {divisions.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div>
             <label className={labelCls}>חטיבה</label>
-            <select className={inputCls} value={form.scope.brigade || ''} onChange={(e) => setScope('brigade', e.target.value)} disabled={!form.scope.division}>
+            <select className={inputCls} value={form.scope.brigade || ''} onChange={(e) => setScope('brigade', e.target.value)}>
               <option value="">— כל החטיבות —</option>
               {brigades.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           <div>
             <label className={labelCls}>גדוד</label>
-            <select className={inputCls} value={form.scope.battalion || ''} onChange={(e) => setScope('battalion', e.target.value)} disabled={!form.scope.brigade}>
+            <select className={inputCls} value={form.scope.battalion || ''} onChange={(e) => setScope('battalion', e.target.value)}>
               <option value="">— כל הגדודים —</option>
               {battalions.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>

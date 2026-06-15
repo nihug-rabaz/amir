@@ -2,6 +2,7 @@
 import type { FacilityFields } from '@/lib/types';
 import { FIELD_GROUPS, type FieldDef } from '@/lib/facilityFieldGroups';
 import { Field, NumField, Check } from './fieldControls';
+import { MezuzotDeficit } from './MezuzotDeficit';
 
 interface Props {
   group: string;
@@ -12,10 +13,14 @@ interface Props {
 // Renders the editable facility-field inputs for a given category group.
 export function FacilityFieldsEditor({ group, fields, onChange }: Props) {
   const defs = FIELD_GROUPS[group] || [];
+  const inputs = defs.filter((d) => d.type !== 'textarea');
+  const notes = defs.filter((d) => d.type === 'textarea');
   return (
     <div className="card card-padded">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {defs.map((d) => <FieldControl key={d.key} def={d} fields={fields} onChange={onChange} />)}
+        {inputs.map((d) => <FieldControl key={d.key} def={d} fields={fields} onChange={onChange} />)}
+        {group === 'mezuzah' && <MezuzotDeficit fields={fields} />}
+        {notes.map((d) => <FieldControl key={d.key} def={d} fields={fields} onChange={onChange} />)}
       </div>
     </div>
   );

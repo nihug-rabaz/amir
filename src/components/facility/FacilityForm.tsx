@@ -11,6 +11,7 @@ import { useToast } from '@/lib/toast';
 import { IconBack, IconBoxes, IconCheck } from '@/components/Icon';
 import { GapStatusBadge } from '@/components/StatusPill';
 import { Field, NumField, Check } from './fieldControls';
+import { MezuzotDeficit } from './MezuzotDeficit';
 
 type Tab = 'details' | 'kitchen' | 'eruv' | 'mezuzot' | 'synagogue' | 'contents' | 'inventory';
 
@@ -377,6 +378,7 @@ export function FacilityForm({ mode, initial, actor }: Props) {
             <NumField label="מזוזות מותקנות (חדרי מגורים)"   val={form.fields.mezuzotResidentialInstalled} set={(v) => updateField('mezuzotResidentialInstalled', v)} />
             <NumField label="מזוזות נדרשות (שאר דלתות)"      val={form.fields.mezuzotOtherNeeded}          set={(v) => updateField('mezuzotOtherNeeded', v)} />
             <NumField label="מזוזות מותקנות (שאר דלתות)"     val={form.fields.mezuzotOtherInstalled}       set={(v) => updateField('mezuzotOtherInstalled', v)} />
+            <MezuzotDeficit fields={form.fields} />
             <div className="md:col-span-2">
               <Field label="הערות מזוזות"><textarea className="input min-h-20" value={form.fields.mezuzotNotes || ''} onChange={(e) => updateField('mezuzotNotes', e.target.value)} /></Field>
             </div>

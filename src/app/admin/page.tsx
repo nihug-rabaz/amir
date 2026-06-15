@@ -198,6 +198,7 @@ export default function AdminOverviewPage() {
       <UserFormModal
         open={formOpen}
         initial={editingUser}
+        facilities={facilities}
         onClose={() => setFormOpen(false)}
         onSaved={handleSaved}
         onError={(m) => toast.danger('שגיאה', m)}

@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState, type ReactNode } from 'react';
-import { IconSearch } from './Icon';
+import { IconSearch, IconDownload } from './Icon';
 
 export interface DataColumn<T> {
   key: string;
@@ -10,6 +10,7 @@ export interface DataColumn<T> {
   sortable?: boolean;
   render?: (row: T, index: number) => ReactNode;
   sortValue?: (row: T) => string | number;
+  exportValue?: (row: T) => string | number;
   cellClass?: string;
 }
 
@@ -31,10 +32,12 @@ interface DataTableProps<T extends { id: string }> {
   defaultSort?: { key: string; dir: 'asc' | 'desc' };
   toolbarExtra?: ReactNode;
   initialSearch?: string;
+  exportable?: boolean;
+  exportFileName?: string;
 }
 
 export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
-  const { rows, columns, searchableFields = [], filters = [], paginate = false, pageSize = 25, onRowClick, rowClass, defaultSort, toolbarExtra, initialSearch } = props;
+  const { rows, columns, searchableFields = [], filters = [], paginate = false, pageSize = 25, onRowClick, rowClass, defaultSort, toolbarExtra, initialSearch, exportable, exportFileName } = props;
   const [search, setSearch] = useState(initialSearch ?? '');
   const [filterState, setFilterState] = useState<Record<string, string>>({});
   const [sortKey, setSortKey] = useState<string | null>(defaultSort?.key ?? null);
@@ -74,9 +77,27 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
   const totalPages = paginate ? Math.max(1, Math.ceil(visible.length / pageSize)) : 1;
   const pageRows = paginate ? visible.slice((page - 1) * pageSize, page * pageSize) : visible;
 
+  // Exports the currently filtered + sorted rows to a UTF-8 CSV that Excel opens natively.
+  function exportToExcel() {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const cell = (row: T, c: DataColumn<T>) =>
+      esc(c.exportValue ? c.exportValue(row) : (row as Record<string, unknown>)[c.key]);
+    const lines = [
+      columns.map((c) => esc(c.label)).join(','),
+      ...visible.map((row) => columns.map((c) => cell(row, c)).join(',')),
+    ];
+    const csv = '\uFEFF' + lines.join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${exportFileName ?? 'export'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-soft overflow-hidden">
-      {(searchableFields.length > 0 || filters.length > 0 || toolbarExtra) && (
+      {(searchableFields.length > 0 || filters.length > 0 || toolbarExtra || exportable) && (
         <div className="flex flex-wrap items-center gap-2.5 p-3.5 border-b border-slate-200 bg-slate-50">
           {searchableFields.length > 0 && (
             <div className="relative flex-1 min-w-[220px]">
@@ -104,6 +125,15 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
             </div>
           ))}
           <div className="flex-1" />
+          {exportable && (
+            <button
+              onClick={exportToExcel}
+              className="btn bg-ok text-white hover:brightness-95 shrink-0"
+              title="ייצוא הרשימה המסוננת לאקסל"
+            >
+              <IconDownload size={16} /> ייצוא לאקסל
+            </button>
+          )}
           {toolbarExtra}
         </div>
       )}

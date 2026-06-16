@@ -45,6 +45,11 @@ export default function GapsPage() {
     return out;
   }, [user, facilities]);
 
+  const divisionOpts = useMemo(() => {
+    const set = new Set(rows.map((r) => r.division).filter((d) => d && d !== '—'));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'he')).map((d) => ({ value: d, label: d }));
+  }, [rows]);
+
   const missing = rows.filter((r) => r.status === 'missing');
   const surplus = rows.filter((r) => r.status === 'surplus');
   const totalMissingUnits = missing.reduce((s, r) => s + r.gap, 0);
@@ -61,8 +66,9 @@ export default function GapsPage() {
     {
       key: 'gap', label: 'פער', center: true,
       render: (r) => <strong style={{ color: r.gap > 0 ? '#c53030' : '#2563eb' }}>{r.gap > 0 ? `-${r.gap}` : `+${Math.abs(r.gap)}`}</strong>,
+      exportValue: (r) => (r.gap > 0 ? -r.gap : Math.abs(r.gap)),
     },
-    { key: 'status', label: 'סטטוס', render: (r) => <GapStatusBadge status={r.status} /> },
+    { key: 'status', label: 'סטטוס', render: (r) => <GapStatusBadge status={r.status} />, exportValue: (r) => (r.status === 'missing' ? 'חסר' : 'עודף') },
   ];
 
   return (
@@ -90,11 +96,14 @@ export default function GapsPage() {
           searchableFields={['facilityName', 'item', 'command', 'division']}
           filters={[
             { key: 'command', label: 'פיקוד', options: COMMANDS.map((c) => ({ value: c, label: c })) },
+            { key: 'division', label: 'אוגדה', options: divisionOpts },
             { key: 'status', label: 'סוג', options: [{ value: 'missing', label: 'חסר' }, { value: 'surplus', label: 'עודף' }] },
           ]}
           paginate
           pageSize={15}
           defaultSort={{ key: 'gap', dir: 'desc' }}
+          exportable
+          exportFileName="פערים-וחוסרים"
           onRowClick={(r) => router.push(`/facilities/${r.facilityId}`)}
         />
       )}

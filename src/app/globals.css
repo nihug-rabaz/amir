@@ -2,10 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Rubik:wght@400;500;600;700&display=swap');
+@font-face {
+  font-family: 'Abraham';
+  src: url('/fonts/abraham/abraham-light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Abraham';
+  src: url('/fonts/abraham/abraham-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Abraham';
+  src: url('/fonts/abraham/abraham-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Abraham';
+  src: url('/fonts/abraham/abraham-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Abraham';
+  src: url('/fonts/abraham/abraham-black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  --font-sans: 'Heebo', 'Rubik', system-ui, sans-serif;
+  --font-sans: 'Abraham', 'Heebo', 'Rubik', system-ui, sans-serif;
   --color-bg: #f4f6fa;
   --color-surface: #ffffff;
   --color-surface-2: #f8fafc;

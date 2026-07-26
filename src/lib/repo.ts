@@ -279,14 +279,16 @@ export class AuditRepo {
 }
 
 export class ComplianceCalc {
-  static async compute(facility: Facility): Promise<Compliance> {
-    const tier = await TierRepo.tierFor(facility.maxCapacity);
+  static async compute(facility: Facility, inventory?: Record<string, number>): Promise<Compliance> {
+    const [tier, items, inv] = await Promise.all([
+      TierRepo.tierFor(facility.maxCapacity),
+      ItemRepo.all(),
+      inventory ? Promise.resolve(inventory) : FacilityRepo.inventoryOf(facility.id),
+    ]);
     if (!tier) {
       return { tier: { id: '-', label: '—', min: 0, max: 0 }, rows: [], compliancePct: 100, totalGap: 0, totalSurplus: 0, missingItems: 0 };
     }
     const std = await StandardRepo.forTier(tier.id);
-    const items = await ItemRepo.all();
-    const inv = await FacilityRepo.inventoryOf(facility.id);
     const rows: ComplianceRow[] = items.map((item) => {
       const required = std[item.id] ?? 0;
       const actual = Number(inv[item.id] ?? 0);
@@ -307,10 +309,13 @@ export class ComplianceCalc {
     return { tier, rows, compliancePct, totalGap, totalSurplus, missingItems };
   }
 
-  static async enrichAll(facilities: Facility[]): Promise<FacilityWithCompliance[]> {
-    const tiers = await TierRepo.all();
-    const items = await ItemRepo.all();
-    const stdAll = await StandardRepo.all();
+  static async enrichAll(facilities: Facility[], opts?: { summary?: boolean }): Promise<FacilityWithCompliance[]> {
+    const summary = !!opts?.summary;
+    const [tiers, items, stdAll] = await Promise.all([
+      TierRepo.all(),
+      ItemRepo.all(),
+      StandardRepo.all(),
+    ]);
     const ids = facilities.map((f) => f.id);
     const invMap: Record<string, Record<string, number>> = {};
     if (ids.length > 0) {
@@ -345,7 +350,8 @@ export class ComplianceCalc {
         ...f,
         compliance: {
           tier: tier || { id: '-', label: '—', min: 0, max: 0 },
-          rows, compliancePct, totalGap, totalSurplus, missingItems,
+          rows: summary ? [] : rows,
+          compliancePct, totalGap, totalSurplus, missingItems,
         },
       };
     });

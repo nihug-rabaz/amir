@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
 import { filterFacilities } from '@/lib/permissions';
-import type { Facility, FacilityFields, FacilityWithCompliance, InventoryItem, StandardTier } from '@/lib/types';
+import type { Facility, FacilityFields, InventoryItem, StandardTier } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
 import { FIELD_GROUPS } from '@/lib/facilityFieldGroups';
 import { fmtNumber } from '@/lib/format';
@@ -19,7 +19,7 @@ export default function InventoryPage() {
   const params = useSearchParams();
   const initialId = params.get('facility');
 
-  const [facilities, setFacilities] = useState<FacilityWithCompliance[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [tiers, setTiers] = useState<StandardTier[]>([]);
   const [standards, setStandards] = useState<Record<string, Record<string, number>>>({});
@@ -34,7 +34,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/facilities?with=compliance').then((r) => r.json()),
+      fetch('/api/facilities').then((r) => r.json()),
       fetch('/api/standards').then((r) => r.json()),
     ]).then(([f, s]) => {
       setFacilities(f.facilities || []);

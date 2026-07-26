@@ -5,8 +5,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'Heebo', 'Rubik', 'system-ui', 'sans-serif'],
-        num: ['Rubik', 'Heebo', 'system-ui', 'sans-serif'],
+        sans: ['Abraham', 'Heebo', 'Rubik', 'system-ui', 'sans-serif'],
+        num: ['Abraham', 'Rubik', 'Heebo', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: {

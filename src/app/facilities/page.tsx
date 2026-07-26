@@ -23,7 +23,7 @@ export default function FacilitiesPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/facilities?with=compliance').then((r) => r.json()),
+      fetch('/api/facilities?with=compliance&summary=1').then((r) => r.json()),
       fetch('/api/users').then((r) => r.json()),
     ])
       .then(([f, u]) => {

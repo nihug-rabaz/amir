@@ -7,6 +7,7 @@ import { ROLE_LABELS } from '@/lib/catalog';
 import { isValidAuthCode } from '@/lib/israeli-id';
 import type { User } from '@/lib/types';
 import { BrandMark } from '@/components/BrandMark';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 type Step = 'id' | 'code';
 
@@ -250,6 +251,8 @@ export default function LoginPage() {
           </>
         )}
       </div>
+
+      <DeveloperCredit tone="dark" className="relative mt-6 max-w-[420px] w-full justify-center px-2" />
     </div>
   );
 }

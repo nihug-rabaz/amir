@@ -7,6 +7,7 @@ import {
   IconHistory, IconX, IconShield,
 } from './Icon';
 import { BrandMark } from './BrandMark';
+import { DeveloperCredit } from './DeveloperCredit';
 import type { ReactNode } from 'react';
 
 interface NavItem {
@@ -83,12 +84,9 @@ export function Sidebar({ onNavigate }: Props) {
         })}
       </nav>
 
-      <div className="mt-auto pt-4 border-t border-white/10 text-xs text-slate-400">
-        <div className="flex items-center gap-2 mb-2 opacity-90">
-          <BrandMark size={28} />
-          <span className="leading-tight">הרבנות הצבאית</span>
-        </div>
-        <div>גרסה 2.0.0</div>
+      <div className="mt-auto pt-4 border-t border-white/10 text-xs text-slate-400 space-y-3">
+        <DeveloperCredit tone="dark" />
+        <div className="opacity-70">גרסה 2.0.0</div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ROLE_LABELS } from '@/lib/catalog';
-import { IconLogout, IconMenu } from './Icon';
+import { IconLogout, IconMenu, IconShield } from './Icon';
 import { GlobalSearch } from './GlobalSearch';
 
 const TITLES: Array<[RegExp, string, string]> = [
@@ -29,7 +29,7 @@ interface Props {
 
 export function Topbar({ onMenuClick }: Props) {
   const pathname = usePathname() || '/';
-  const { user, signOut } = useAuth();
+  const { user, signOut, impersonator, stopImpersonating } = useAuth();
   const { title, sub } = titleFor(pathname);
   const initials = (user?.name || '?').split(' ').map((s) => s[0]).slice(0, 2).join('');
 
@@ -54,6 +54,17 @@ export function Topbar({ onMenuClick }: Props) {
 
       <GlobalSearch />
 
+      {impersonator && (
+        <button
+          onClick={stopImpersonating}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 transition shrink-0"
+          title={`חזרה אל ${impersonator.name}`}
+        >
+          <IconShield size={14} />
+          חזרה למנהל
+        </button>
+      )}
+
       <button
         onClick={signOut}
         className="flex items-center gap-2 sm:gap-2.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 transition shrink-0"
@@ -65,7 +76,9 @@ export function Topbar({ onMenuClick }: Props) {
         </div>
         <div className="hidden sm:flex flex-col leading-tight text-right min-w-0">
           <strong className="text-[13px] truncate max-w-[140px]">{user?.name || 'אורח'}</strong>
-          <span className="text-[11px] text-slate-500 truncate max-w-[140px]">{ROLE_LABELS[user?.role || ''] || ''}</span>
+          <span className="text-[11px] text-slate-500 truncate max-w-[140px]">
+            {impersonator ? `התחזות · ${ROLE_LABELS[user?.role || ''] || ''}` : (ROLE_LABELS[user?.role || ''] || '')}
+          </span>
         </div>
         <IconLogout size={16} className="text-slate-500 hidden sm:block" />
       </button>

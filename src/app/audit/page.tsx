@@ -1,16 +1,34 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
 import type { AuditEntry } from '@/lib/types';
 import { fmtDateTime } from '@/lib/format';
 import { DataTable, type DataColumn } from '@/components/DataTable';
+import { IconShield } from '@/components/Icon';
 
 export default function AuditPage() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/audit').then((r) => r.json()).then((j) => setEntries(j.entries || [])).finally(() => setLoading(false));
-  }, []);
+    if (user?.role !== 'admin') return;
+    setLoading(true);
+    fetch('/api/audit')
+      .then((r) => r.json())
+      .then((j) => setEntries(j.entries || []))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  if (user && user.role !== 'admin') {
+    return (
+      <div className="card card-padded text-center py-10 text-slate-500">
+        <div className="opacity-40 mb-3 inline-block"><IconShield size={48} /></div>
+        <h4 className="font-bold text-slate-900">גישה מוגבלת</h4>
+        <div className="text-xs mt-1">רק מנהל מערכת רשאי לצפות ביומן השינויים</div>
+      </div>
+    );
+  }
 
   const columns: DataColumn<AuditEntry>[] = [
     { key: 'timestamp', label: 'תאריך ושעה', render: (r) => fmtDateTime(r.timestamp), sortValue: (r) => new Date(r.timestamp).getTime() },

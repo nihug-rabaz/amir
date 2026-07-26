@@ -22,7 +22,7 @@ const NAV: NavItem[] = [
   { path: '/inventory',  label: 'עדכון מלאי',       icon: <IconBoxes /> },
   { path: '/gaps',       label: 'פערים וחוסרים',   icon: <IconAlert /> },
   { path: '/standards',  label: 'תקנים (חוקה)',    icon: <IconScale /> },
-  { path: '/audit',      label: 'יומן שינויים',    icon: <IconHistory /> },
+  { path: '/audit',      label: 'יומן שינויים',    icon: <IconHistory />, adminOnly: true },
 ];
 
 interface Props {

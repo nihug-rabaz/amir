@@ -17,7 +17,7 @@ import {
 } from '@/components/Icon';
 
 export default function AdminOverviewPage() {
-  const { user } = useAuth();
+  const { user, impersonate } = useAuth();
   const toast = useToast();
   const router = useRouter();
   const params = useSearchParams();
@@ -31,6 +31,21 @@ export default function AdminOverviewPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [search, setSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  function impersonateUser(target: User) {
+    if (!user || user.role !== 'admin') return;
+    if (target.id === user.id) {
+      toast.warning('כבר מחובר', 'אתה כבר מחובר כמשתמש זה');
+      return;
+    }
+    if (!target.active) {
+      toast.danger('משתמש לא פעיל', 'לא ניתן להתחבר כמשתמש לא פעיל');
+      return;
+    }
+    toast.success(`מחובר כ־${target.name}`, ROLE_LABELS[target.role]);
+    impersonate(target);
+  }
+
 
   const reloadUsers = useCallback(() => {
     return fetch('/api/users').then((r) => r.json()).then((u) => setUsers(u.users || []));
@@ -186,9 +201,17 @@ export default function AdminOverviewPage() {
               onEdit={openEditUser}
               onDelete={handleDelete}
               onOpenSummary={(id) => selectUser(id)}
+              onImpersonate={impersonateUser}
             />
           ) : selectedUser ? (
-            <UserSummary user={selectedUser} facilities={facilities} users={users} onEdit={() => openEditUser(selectedUser)} onClear={() => selectUser(null)} />
+            <UserSummary
+              user={selectedUser}
+              facilities={facilities}
+              users={users}
+              onEdit={() => openEditUser(selectedUser)}
+              onClear={() => selectUser(null)}
+              onImpersonate={() => impersonateUser(selectedUser)}
+            />
           ) : (
             <AllFacilitiesView facilities={facilities} users={users} />
           )}
@@ -305,9 +328,10 @@ interface ManageUsersProps {
   onEdit: (u: User) => void;
   onDelete: (u: User) => void;
   onOpenSummary: (id: string) => void;
+  onImpersonate: (u: User) => void;
 }
 
-function ManageUsersView({ users, facilities, onAdd, onEdit, onDelete, onOpenSummary }: ManageUsersProps) {
+function ManageUsersView({ users, facilities, onAdd, onEdit, onDelete, onOpenSummary, onImpersonate }: ManageUsersProps) {
   return (
     <div className="card overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
@@ -350,6 +374,14 @@ function ManageUsersView({ users, facilities, onAdd, onEdit, onDelete, onOpenSum
                   </td>
                   <td>
                     <div className="flex gap-1 justify-end">
+                      <button
+                        onClick={() => onImpersonate(u)}
+                        className="btn btn-sm btn-ghost"
+                        title="התחבר כמשתמש"
+                        disabled={!u.active}
+                      >
+                        <IconUsers size={14} />
+                      </button>
                       <button onClick={() => onEdit(u)} className="btn btn-sm btn-ghost" title="עריכה"><IconEdit size={14} /></button>
                       <button onClick={() => onDelete(u)} className="btn btn-sm btn-ghost text-bad" title="מחיקה"><IconX size={14} /></button>
                     </div>
@@ -462,7 +494,21 @@ function AllFacilitiesView({ facilities, users }: { facilities: FacilityWithComp
   );
 }
 
-function UserSummary({ user, facilities, users, onEdit, onClear }: { user: User; facilities: FacilityWithCompliance[]; users: User[]; onEdit: () => void; onClear: () => void }) {
+function UserSummary({
+  user,
+  facilities,
+  users,
+  onEdit,
+  onClear,
+  onImpersonate,
+}: {
+  user: User;
+  facilities: FacilityWithCompliance[];
+  users: User[];
+  onEdit: () => void;
+  onClear: () => void;
+  onImpersonate: () => void;
+}) {
   const assigned = useMemo(() => filterFacilities(user, facilities), [user, facilities]);
 
   const stats = useMemo(() => {
@@ -517,7 +563,14 @@ function UserSummary({ user, facilities, users, onEdit, onClear }: { user: User;
               <div className="text-xs opacity-70 mt-0.5">תחום אחריות: {scopeLabel}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+            <button
+              onClick={onImpersonate}
+              disabled={!user.active}
+              className="btn btn-ghost text-white border-white/20 bg-white/10 hover:bg-white/20 disabled:opacity-40"
+            >
+              <IconUsers size={14} /> התחבר כמשתמש
+            </button>
             <button onClick={onEdit} className="btn btn-ghost text-white border-white/20 bg-white/10 hover:bg-white/20">
               <IconEdit size={14} /> עריכת משתמש
             </button>

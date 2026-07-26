@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
+import { filterFacilities } from '@/lib/permissions';
 import type { Facility, InventoryItem } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
 import { IconBuilding, IconBoxes, IconSearch, IconUsers } from './Icon';
@@ -31,6 +33,7 @@ const UNIT_LEVELS: Array<[keyof Facility, string]> = [
 // Global header search across facilities, units (hierarchy) and equipment items.
 export function GlobalSearch() {
   const router = useRouter();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -51,23 +54,25 @@ export function GlobalSearch() {
     });
   }
 
+  const scopedFacilities = useMemo(() => filterFacilities(user, facilities), [user, facilities]);
+
   const units = useMemo(() => {
     const map = new Map<string, string>();
-    for (const f of facilities) {
+    for (const f of scopedFacilities) {
       for (const [field, level] of UNIT_LEVELS) {
         const v = (f[field] as string | null) || '';
         if (v && v !== '—' && !map.has(v)) map.set(v, level);
       }
     }
     return Array.from(map, ([name, level]) => ({ name, level }));
-  }, [facilities]);
+  }, [scopedFacilities]);
 
   const results = useMemo<SearchResult[]>(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const has = (s: string | null | undefined) => String(s ?? '').toLowerCase().includes(q);
 
-    const fac: SearchResult[] = facilities
+    const fac: SearchResult[] = scopedFacilities
       .filter((f) => has(f.name) || has(f.command) || has(f.division) || has(f.brigade) || has(f.battalion))
       .slice(0, 6)
       .map((f) => ({
@@ -94,7 +99,7 @@ export function GlobalSearch() {
       }));
 
     return [...fac, ...uni, ...itm];
-  }, [query, facilities, units, items]);
+  }, [query, scopedFacilities, units, items]);
 
   useEffect(() => { setActive(0); }, [query]);
 

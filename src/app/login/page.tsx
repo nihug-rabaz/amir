@@ -57,8 +57,10 @@ export default function LoginPage() {
     if (!idNumber) return toastRef.current.danger('שגיאה', 'יש להזין ת״ז');
 
     if (method === 'card') {
+      if (loading) return toastRef.current.danger('טוען', 'רשימת המשתמשים עדיין נטענת');
+      if (loadError) return toastRef.current.danger('שגיאה', loadError);
       const u = findUser(idNumber);
-      if (!u) return toastRef.current.danger('משתמש לא נמצא', 'בחר מהרשימה למטה');
+      if (!u) return toastRef.current.danger('משתמש לא נמצא', 'אין משתמש פעיל עם מספר זהות זה');
       pick(u);
       return;
     }
@@ -107,6 +109,10 @@ export default function LoginPage() {
         return;
       }
 
+      if (loading) {
+        toastRef.current.danger('טוען', 'רשימת המשתמשים עדיין נטענת — נסה שוב בעוד רגע');
+        return;
+      }
       const u = findUser(idNumber);
       if (!u) {
         toastRef.current.danger('אין הרשאה באמי״ר', 'המשתמש אומת ב-MyIDF אך לא מוגדר כמשתמש פעיל במערכת');
@@ -186,40 +192,19 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {loadError && (
+              <div className="mt-3 text-xs text-red-300 bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2">
+                {loadError}
+              </div>
+            )}
+
             <button
               onClick={start}
-              disabled={busy || loading}
+              disabled={busy || (method === 'card' && loading)}
               className="mt-4 w-full justify-center btn btn-accent"
             >
               {busy ? 'שולח...' : method === 'myidf' ? 'שלח קוד אימות' : 'התחבר למערכת'}
             </button>
-
-            <div className="mt-5 pt-4 border-t border-white/10">
-              <h4 className="text-xs text-slate-300 font-semibold mb-2">כניסה מהירה (הדגמה)</h4>
-              {loading ? (
-                <div className="text-slate-400 text-sm">טוען משתמשים…</div>
-              ) : loadError ? (
-                <div className="text-xs text-red-300 bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2">
-                  {loadError}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {users.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => pick(u)}
-                      className="bg-white/5 border border-white/10 hover:bg-accent/12 hover:border-accent/30 text-white px-3 py-2 rounded-lg text-right text-xs flex items-center justify-between transition"
-                    >
-                      <span>
-                        <strong className="font-semibold">{u.name}</strong>
-                        <span className="text-slate-300"> · {ROLE_LABELS[u.role]}</span>
-                      </span>
-                      <small className="text-slate-400 text-[10px]">{u.personalId}</small>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </>
         ) : (
           <>

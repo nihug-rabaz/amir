@@ -7,6 +7,10 @@ import { AppShell } from '@/components/AppShell';
 export const metadata: Metadata = {
   title: 'אמי״ר 2.0 — ארגון מרחב ייעודי רבנותי',
   description: 'מערכת לניהול ומעקב אחר מלאי ציוד רבנותי בכל מתקן צבאי',
+  icons: {
+    icon: '/favicon.jpg',
+    apple: '/brand/mark.jpg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

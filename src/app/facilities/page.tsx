@@ -10,6 +10,8 @@ import { fmtDate, fmtNumber } from '@/lib/format';
 import { DataTable, type DataColumn } from '@/components/DataTable';
 import { ComplianceCell, StatusPill } from '@/components/StatusPill';
 import { IconDownload, IconEdit, IconEye, IconPlus } from '@/components/Icon';
+import { PageHero } from '@/components/PageHero';
+import { EmptyState } from '@/components/EmptyState';
 
 export default function FacilitiesPage() {
   const { user } = useAuth();
@@ -117,19 +119,29 @@ export default function FacilitiesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold m-0">מתקנים</h1>
-          <div className="text-sm text-slate-500 mt-1">רשימת המתקנים הרבנותיים בתחום אחריותך</div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={exportCsv} className="btn btn-ghost"><IconDownload /> ייצוא לאקסל</button>
-          <Link href="/facilities/new" className="btn btn-primary"><IconPlus /> הוספת מתקן</Link>
-        </div>
-      </div>
+      <PageHero
+        title="מתקנים"
+        subtitle="רשימת המתקנים הרבנותיים בתחום אחריותך"
+        actions={(
+          <>
+            <button onClick={exportCsv} className="btn btn-on-dark"><IconDownload /> ייצוא לאקסל</button>
+            <Link href="/facilities/new" className="btn btn-accent"><IconPlus /> הוספת מתקן</Link>
+          </>
+        )}
+      />
 
       {loading ? (
-        <div className="card card-padded text-slate-500">טוען…</div>
+        <div className="card card-padded">
+          <EmptyState title="טוען מתקנים…" compact />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            title="אין מתקנים להצגה"
+            subtitle="לא נמצאו מתקנים בתחום ההרשאות שלך"
+            action={<Link href="/facilities/new" className="btn btn-primary"><IconPlus /> הוספת מתקן</Link>}
+          />
+        </div>
       ) : (
         <DataTable
           key={`q-${initialSearch}`}

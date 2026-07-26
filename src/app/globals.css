@@ -22,20 +22,24 @@
 
 html, body {
   margin: 0; padding: 0; min-height: 100%;
-  background: var(--color-bg);
+  background:
+    radial-gradient(ellipse 80% 50% at 100% -10%, rgba(212,175,55,0.06), transparent 50%),
+    radial-gradient(ellipse 60% 40% at -10% 20%, rgba(31,77,122,0.07), transparent 45%),
+    var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
   direction: rtl;
 }
 
 @layer components {
-  .card { @apply bg-white border border-slate-200 rounded-xl shadow-soft p-4; }
+  .card { @apply bg-white/95 border border-slate-200/90 rounded-xl shadow-soft p-4 backdrop-blur-[2px]; }
   .card-padded { @apply p-6; }
 
-  .btn { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold bg-slate-100 text-slate-900 hover:bg-slate-200 transition; }
-  .btn-primary { @apply bg-primary text-white hover:bg-primary-700; }
-  .btn-accent { @apply bg-gradient-to-br from-accent to-accent-light text-primary hover:brightness-105; }
+  .btn { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold bg-slate-100 text-slate-900 hover:bg-slate-200 transition duration-200; }
+  .btn-primary { @apply bg-primary text-white hover:bg-primary-700 shadow-sm; }
+  .btn-accent { @apply bg-gradient-to-br from-accent to-accent-light text-primary hover:brightness-105 shadow-sm; }
   .btn-ghost { @apply bg-transparent border border-slate-200 text-slate-900 hover:bg-slate-100; }
+  .btn-on-dark { @apply bg-white/10 border border-white/25 text-white hover:bg-white/20; }
   .btn-danger { @apply bg-bad text-white hover:brightness-95; }
   .btn-sm { @apply px-2.5 py-1 text-xs; }
 
@@ -82,6 +86,18 @@ html, body {
 
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 .animate-fade-in { animation: fadeIn 180ms ease both; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-fade-up { animation: fadeUp 420ms cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes softPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.animate-soft-pulse { animation: softPulse 1.6s ease-in-out infinite; }
 
 @keyframes slideInRtl { from { transform: translateX(100%) } to { transform: translateX(0) } }
 .animate-slide-in-rtl { animation: slideInRtl 220ms cubic-bezier(.2,.8,.2,1) both; }

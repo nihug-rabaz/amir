@@ -20,6 +20,8 @@ function complianceColor(pct: number): string {
   return '#c53030';
 }
 import Link from 'next/link';
+import { PageHero } from '@/components/PageHero';
+import { EmptyState } from '@/components/EmptyState';
 
 const PIE_COLORS = ['#16a34a', '#ea7c1d', '#94a3b8', '#2563eb', '#7c3aed', '#cbd5e1', '#d4af37', '#0f2a44'];
 
@@ -103,33 +105,53 @@ export default function DashboardPage() {
   }, [visible]);
 
   if (err) {
-    return <div className="card card-padded text-bad">שגיאה בטעינה: {err}</div>;
+    return (
+      <div className="card card-padded">
+        <EmptyState
+          title="שגיאה בטעינת הדשבורד"
+          subtitle={err}
+          imageSrc="/ui/empty-inventory.jpg"
+        />
+      </div>
+    );
   }
   if (!data) {
-    return <div className="card card-padded text-slate-500">טוען נתוני דשבורד…</div>;
+    return (
+      <div className="card card-padded">
+        <EmptyState title="טוען נתוני דשבורד…" subtitle="מכין את תמונת המצב בתחום האחריות שלך" compact />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold m-0">שלום {user?.name}</h1>
-          <div className="text-sm text-slate-500 mt-1">
-            {ROLE_LABELS[user?.role || '']} · {summary.total} מתקנים בתחום אחריותך
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {fullscreen ? (
-            <button onClick={() => setFullscreen(false)} className="btn btn-ghost"><IconShrink /> יציאה מתצוגה מלאה</button>
-          ) : (
-            <button onClick={() => setFullscreen(true)} className="btn btn-ghost"><IconExpand /> תצוגה מלאה</button>
-          )}
-          <Link href="/facilities" className="btn btn-ghost"><IconBuilding /> מתקנים</Link>
-          <Link href="/facilities/new" className="btn btn-primary"><IconBuilding /> הוספת מתקן</Link>
-        </div>
-      </div>
+      <PageHero
+        title={`שלום ${user?.name || ''}`}
+        subtitle={`${ROLE_LABELS[user?.role || '']} · ${summary.total} מתקנים בתחום אחריותך`}
+        actions={(
+          <>
+            {fullscreen ? (
+              <button onClick={() => setFullscreen(false)} className="btn btn-on-dark"><IconShrink /> יציאה מתצוגה מלאה</button>
+            ) : (
+              <button onClick={() => setFullscreen(true)} className="btn btn-on-dark"><IconExpand /> תצוגה מלאה</button>
+            )}
+            <Link href="/facilities" className="btn btn-on-dark"><IconBuilding /> מתקנים</Link>
+            <Link href="/facilities/new" className="btn btn-accent"><IconBuilding /> הוספת מתקן</Link>
+          </>
+        )}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {summary.total === 0 && (
+        <div className="card">
+          <EmptyState
+            title="אין מתקנים בתחום האחריות"
+            subtitle="כשיוגדרו מתקנים בהרשאות שלך, המדדים והגרפים יופיעו כאן"
+            action={<Link href="/facilities/new" className="btn btn-primary"><IconBuilding /> הוספת מתקן</Link>}
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-up">
         <Kpi label="סה״כ מתקנים" value={fmtNumber(summary.total)} icon={<IconBuilding />} tone="info" />
         <Kpi label="תקינים - בשימוש" value={fmtNumber(summary.active)} icon={<IconCheck />} tone="success" />
         <Kpi label="בשיפוץ" value={fmtNumber(summary.reno)} icon={<IconCog />} tone="warning" />
@@ -163,7 +185,7 @@ export default function DashboardPage() {
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconScale className="text-primary-600" /> אחוז עמידה בתקן לפי פיקוד</h3>
           <div className="h-[260px]" dir="ltr">
             {byCommand.length === 0 ? (
-              <div className="h-full grid place-items-center text-sm text-slate-400">אין נתונים להצגה</div>
+              <EmptyState title="אין נתונים להצגה" imageSrc="/ui/empty-inventory.jpg" compact />
             ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={byCommand} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 8 }}>
@@ -192,7 +214,7 @@ export default function DashboardPage() {
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconAlert className="text-primary-600" /> מספר חוסרים לפי פיקוד</h3>
           <div className="h-[260px]" dir="ltr">
             {byCommand.length === 0 ? (
-              <div className="h-full grid place-items-center text-sm text-slate-400">אין נתונים להצגה</div>
+              <EmptyState title="אין נתונים להצגה" imageSrc="/ui/empty-inventory.jpg" compact />
             ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={byCommand} margin={{ top: 18, right: 8, bottom: 4, left: 8 }}>
@@ -228,7 +250,7 @@ export default function DashboardPage() {
         <div className="card card-padded">
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconAlert className="text-primary-600" /> עשרת המתקנים עם הכי הרבה חוסרים</h3>
           {topFacilities.length === 0 ? (
-            <div className="text-slate-500 text-sm">אין חוסרים</div>
+            <EmptyState title="אין חוסרים" subtitle="כל המתקנים בתחום עומדים בדרישות כרגע" imageSrc="/ui/empty-inventory.jpg" compact />
           ) : (
             <table className="data-table">
               <tbody>
@@ -252,7 +274,7 @@ export default function DashboardPage() {
         <div className="card card-padded">
           <h3 className="font-bold mb-3 flex items-center gap-2"><IconScroll className="text-primary-600" /> עשרת הפריטים החסרים ביותר</h3>
           {topItems.length === 0 ? (
-            <div className="text-slate-500 text-sm">אין פריטים חסרים</div>
+            <EmptyState title="אין פריטים חסרים" imageSrc="/ui/empty-inventory.jpg" compact />
           ) : (
             <div className="space-y-2">
               {topItems.map(([name, count]) => {

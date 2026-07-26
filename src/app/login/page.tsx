@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
 import { ROLE_LABELS } from '@/lib/catalog';
 import { isValidAuthCode } from '@/lib/israeli-id';
 import type { User } from '@/lib/types';
+import { BrandMark } from '@/components/BrandMark';
 
 type Step = 'id' | 'code';
 
@@ -136,31 +138,34 @@ export default function LoginPage() {
   const inputClass = 'mt-1 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none';
 
   return (
-    <div
-      className="min-h-screen grid place-items-center p-6 text-white"
-      style={{
-        background:
-          'radial-gradient(circle at 20% 20%, rgba(212,175,55,0.08), transparent 50%),' +
-          'radial-gradient(circle at 80% 80%, rgba(31,77,122,0.18), transparent 50%),' +
-          'linear-gradient(180deg, #0a1b2e 0%, #0f2a44 100%)',
-      }}
-    >
+    <div className="relative min-h-screen grid place-items-center p-6 text-white overflow-hidden">
+      <Image
+        src="/ui/login-atmosphere.jpg"
+        alt=""
+        fill
+        priority
+        className="object-cover scale-105 animate-soft-pulse"
+        sizes="100vw"
+      />
       <div
-        className="w-[420px] max-w-[92vw] bg-white/5 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md transition"
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(10,27,46,0.72) 0%, rgba(15,42,68,0.82) 55%, rgba(10,27,46,0.92) 100%)',
+        }}
+        aria-hidden
+      />
+      <div
+        className="relative w-[420px] max-w-[92vw] bg-white/8 border border-white/15 rounded-2xl p-8 shadow-2xl backdrop-blur-md transition animate-fade-up"
         style={{ opacity: fade ? 0 : 1, transform: fade ? 'translateY(-8px)' : 'none' }}
       >
-        <div
-          className="w-16 h-16 rounded-2xl grid place-items-center font-extrabold text-2xl text-primary mb-4 shadow-[0_12px_30px_rgba(212,175,55,0.3)]"
-          style={{ background: 'linear-gradient(135deg, #d4af37, #e6c768)' }}
-        >
-          אמ
-        </div>
-        <h1 className="text-[22px] font-extrabold m-0">אמי״ר 2.0</h1>
-        <div className="text-slate-300 text-sm mt-1">
+        <BrandMark size={72} priority className="mb-5 shadow-[0_12px_30px_rgba(212,175,55,0.35)]" />
+        <h1 className="text-[28px] sm:text-[32px] font-extrabold m-0 tracking-tight">אמי״ר 2.0</h1>
+        <div className="text-slate-200 text-sm mt-2 leading-relaxed">
           {step === 'code'
             ? 'אימות קוד SMS · שלב 2 מתוך 2'
             : method === 'myidf'
-              ? 'אימות MyIDF · שלב 1: הזנת תעודת זהות'
+              ? 'ארגון מרחב ייעודי רבנותי · אימות MyIDF'
               : 'ארגון מרחב ייעודי רבנותי · התחברות מאובטחת'}
         </div>
 

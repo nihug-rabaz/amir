@@ -10,6 +10,8 @@ import { DataTable, type DataColumn } from '@/components/DataTable';
 import { GapStatusBadge } from '@/components/StatusPill';
 import { IconAlert, IconBoxes, IconBuilding, IconScroll } from '@/components/Icon';
 import { Kpi } from '@/components/Kpi';
+import { PageHero } from '@/components/PageHero';
+import { EmptyState } from '@/components/EmptyState';
 
 export default function GapsPage() {
   const { user } = useAuth();
@@ -73,14 +75,12 @@ export default function GapsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold m-0">פערים וחוסרים</h1>
-          <div className="text-sm text-slate-500 mt-1">תצוגה מאוחדת של כל הפערים מול תקני רבצ״ר</div>
-        </div>
-      </div>
+      <PageHero
+        title="פערים וחוסרים"
+        subtitle="תצוגה מאוחדת של כל הפערים מול תקני רבצ״ר"
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-up">
         <Kpi label="פריטים חסרים" value={fmtNumber(missing.length)} icon={<IconAlert />} tone="danger" delta={`${fmtNumber(totalMissingUnits)} יחידות בסה״כ`} />
         <Kpi label="פריטים בעודף" value={fmtNumber(surplus.length)} icon={<IconBoxes />} tone="info" delta={`${fmtNumber(totalSurplusUnits)} יחידות בסה״כ`} />
         <Kpi label="מתקנים עם פערים" value={fmtNumber(new Set(missing.map((r) => r.facilityId)).size)} icon={<IconBuilding />} tone="warning" />
@@ -88,7 +88,17 @@ export default function GapsPage() {
       </div>
 
       {loading ? (
-        <div className="card card-padded text-slate-500">טוען…</div>
+        <div className="card card-padded">
+          <EmptyState title="טוען פערים…" imageSrc="/ui/empty-inventory.jpg" compact />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            title="אין פערים להצגה"
+            subtitle="לא נמצאו חוסרים או עודפים בתחום האחריות שלך"
+            imageSrc="/ui/empty-inventory.jpg"
+          />
+        </div>
       ) : (
         <DataTable
           rows={rows}

@@ -49,7 +49,7 @@
   --color-text-soft: #64748b;
   --color-text-muted: #475569;
   --sidebar-width: 260px;
-  --topbar-height: 64px;
+  --topbar-height: 56px;
 }
 
 * { box-sizing: border-box; }

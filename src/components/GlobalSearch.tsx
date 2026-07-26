@@ -213,17 +213,17 @@ export function GlobalSearch() {
 
       <button
         type="button"
-        className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700 shrink-0"
+        className="md:hidden h-10 w-10 grid place-items-center rounded-xl hover:bg-slate-100 active:bg-slate-200 text-slate-700 shrink-0"
         aria-label="חיפוש"
         onClick={() => setMobileOpen(true)}
       >
-        <IconSearch size={22} />
+        <IconSearch size={20} />
       </button>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex flex-col bg-white animate-fade-in">
-          <div className="flex items-center gap-2 px-3 py-3 border-b border-slate-200 shrink-0">
-            <div className="relative flex-1">
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col bg-white animate-fade-in" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+          <div className="flex items-center gap-2 px-3 h-14 border-b border-slate-200 shrink-0">
+            <div className="relative flex-1 min-w-0">
               <input
                 ref={mobileInputRef}
                 type="search"
@@ -231,20 +231,20 @@ export function GlobalSearch() {
                 placeholder="חיפוש מתקנים, יחידות, פריטים..."
                 onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
                 onKeyDown={onKeyDown}
-                className="w-full pr-10 pl-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-600 focus:ring-2 focus:ring-primary-600/15 outline-none"
+                className="w-full pr-10 pl-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-600 focus:ring-2 focus:ring-primary-600/15 outline-none text-[15px]"
               />
               <IconSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             </div>
             <button
               type="button"
               onClick={closeMobile}
-              className="p-2 rounded-lg hover:bg-slate-100 text-slate-700 shrink-0"
+              className="h-10 w-10 grid place-items-center rounded-xl hover:bg-slate-100 text-slate-700 shrink-0"
               aria-label="סגור חיפוש"
             >
               <IconX size={22} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="flex-1 overflow-y-auto scrollbar-thin overscroll-contain">
             {renderResults(true)}
           </div>
         </div>

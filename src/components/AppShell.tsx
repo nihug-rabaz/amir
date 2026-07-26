@@ -76,7 +76,7 @@ function ShellLayout({ children }: { children: ReactNode }) {
 
       <div className="flex flex-col min-w-0 min-h-screen lg:mr-[260px]">
         <Topbar onMenuClick={() => setDrawerOpen(true)} />
-        <main className="p-3 sm:p-4 md:p-6 flex-1">{children}</main>
+        <main className="p-3 sm:p-4 md:p-6 flex-1 min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

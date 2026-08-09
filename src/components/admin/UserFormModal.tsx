@@ -77,7 +77,7 @@ export function UserFormModal({ open, initial, facilities = [], onClose, onSaved
     try {
       const r = await fetch('/api/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify(payload),
       });
       const j = await r.json();

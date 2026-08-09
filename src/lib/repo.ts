@@ -4,6 +4,7 @@ import type {
   Compliance, ComplianceRow, FacilityWithCompliance, AuditEntry, GapStatus,
 } from './types';
 import { uid } from './format';
+import { repairUtf8Mojibake } from './utf8';
 
 type Row = Record<string, unknown>;
 
@@ -45,7 +46,7 @@ function mapFacility(r: Row): Facility {
 function mapUser(r: Row): User {
   return {
     id: asString(r.id),
-    name: asString(r.name),
+    name: repairUtf8Mojibake(asString(r.name)),
     personalId: asString(r.personal_id),
     role: asString(r.role) as User['role'],
     scope: {
@@ -74,9 +75,10 @@ export class UserRepo {
   }
   static async upsert(u: User): Promise<User> {
     const id = u.id || uid('u');
+    const name = repairUtf8Mojibake(u.name);
     await sql()`
       INSERT INTO users (id, name, personal_id, role, scope_command, scope_division, scope_brigade, scope_battalion, email, active, updated_at)
-      VALUES (${id}, ${u.name}, ${u.personalId}, ${u.role},
+      VALUES (${id}, ${name}, ${u.personalId}, ${u.role},
               ${u.scope.command}, ${u.scope.division}, ${u.scope.brigade}, ${u.scope.battalion},
               ${u.email || null}, ${u.active}, NOW())
       ON CONFLICT (id) DO UPDATE SET
@@ -91,7 +93,7 @@ export class UserRepo {
         active = EXCLUDED.active,
         updated_at = NOW()
     `;
-    return { ...u, id };
+    return { ...u, id, name };
   }
   static async delete(id: string): Promise<void> {
     await sql()`DELETE FROM users WHERE id = ${id}`;

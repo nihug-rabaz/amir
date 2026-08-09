@@ -181,7 +181,7 @@ export default function LoginPage() {
         className="relative w-[420px] max-w-[92vw] bg-white/8 border border-white/15 rounded-2xl p-8 shadow-2xl backdrop-blur-md transition animate-fade-up"
         style={{ opacity: fade ? 0 : 1, transform: fade ? 'translateY(-8px)' : 'none' }}
       >
-        <BrandMark size={72} priority className="mb-5 shadow-[0_12px_30px_rgba(212,175,55,0.35)]" />
+        <BrandMark size={72} priority className="mb-5 shadow-[0_12px_30px_rgba(23,58,94,0.22)]" />
         <h1 className="text-[28px] sm:text-[32px] font-extrabold m-0 tracking-tight">אמי״ר 2.0</h1>
         <div className="text-slate-200 text-sm mt-2 leading-relaxed">
           {step === 'code'

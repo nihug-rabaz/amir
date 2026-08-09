@@ -7,15 +7,15 @@ interface Props {
   priority?: boolean;
 }
 
-// Shared navy-gold brand emblem used on login and shell.
+// Shared light brand emblem (scroll + inventory) used on login and shell.
 export function BrandMark({ size = 44, className = '', priority = false }: Props) {
   return (
     <span
-      className={`relative inline-grid place-items-center overflow-hidden rounded-xl shadow-[0_6px_14px_rgba(212,175,55,0.25)] ${className}`}
+      className={`relative inline-grid place-items-center overflow-hidden rounded-xl shadow-[0_6px_16px_rgba(23,58,94,0.18)] ring-1 ring-[#173a5e]/15 ${className}`}
       style={{ width: size, height: size }}
     >
       <Image
-        src="/brand/mark.jpg"
+        src="/brand/mark.png"
         alt="אמי״ר"
         width={size}
         height={size}

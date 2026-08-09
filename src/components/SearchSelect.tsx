@@ -81,7 +81,7 @@ export function SearchSelect({ options, value, onChange, placeholder = 'חיפו
       )}
 
       {open && (
-        <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto scrollbar-thin bg-white border border-slate-200 rounded-lg shadow-card">
+        <div className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto scrollbar-thin bg-white border border-slate-200 rounded-lg shadow-lift">
           {filtered.length === 0 ? (
             <div className="px-3 py-3 text-sm text-slate-400 text-center">{emptyText}</div>
           ) : filtered.map((o, i) => (

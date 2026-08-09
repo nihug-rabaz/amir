@@ -137,9 +137,9 @@ export default function InventoryPage() {
         )}
       </div>
 
-      <div className="card card-padded">
+      <div className="card card-padded relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
+          <div className="relative z-20">
             <label className="label">בחר מתקן</label>
             <SearchSelect
               options={visible.map((f) => ({ value: f.id, label: f.name, sub: f.command }))}
@@ -165,7 +165,7 @@ export default function InventoryPage() {
       </div>
 
       {!selected ? (
-        <div className="card card-padded text-center py-10 text-slate-500">
+        <div className="card card-padded text-center py-10 text-slate-500 relative z-0">
           <div className="text-4xl opacity-40 mb-2"><IconBoxes size={36} /></div>
           <h4 className="font-bold text-slate-900">בחר מתקן להתחיל</h4>
           <div className="text-xs mt-1">לאחר בחירת מתקן יוצגו רשימת הפריטים, התקן הנדרש והמלאי הנוכחי</div>

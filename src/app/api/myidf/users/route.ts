@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_BASE = 'https://my.rabaz.co.il';
 const DEFAULT_ORIGIN = 'https://amir.rabaz.co.il';
-const UPSTREAM_TIMEOUT_MS = 15000;
+const UPSTREAM_TIMEOUT_MS = 12000;
 
 interface MyIdfPayload {
   isValid: boolean;
@@ -26,6 +26,15 @@ function myIdfConfig() {
     baseUrl: (process.env.MYIDF_BASE_URL || DEFAULT_BASE).replace(/\/$/, ''),
     origin: process.env.MYIDF_ORIGIN || DEFAULT_ORIGIN,
   };
+}
+
+function isValidHttpUrl(value: string) {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 async function callMyIdf(
@@ -79,7 +88,21 @@ function upstreamError(
 
 // Step 1: look up the user by ID and trigger the SMS code.
 async function sendCode(cleanId: string, apiKey: string, baseUrl: string, origin: string) {
-  const v1 = await callMyIdf('/api/v1/idf/users', { idNumber: cleanId }, apiKey, baseUrl, origin);
+  const body = { idNumber: cleanId };
+  // Prefer legacy — current MyIDF host answers /api/idf/* reliably; /api/v1/* often 403/404.
+  const legacy = await callMyIdf('/api/idf/users', body, apiKey, baseUrl, origin);
+  if (legacy.response?.ok && legacy.data?.sessionCookie) {
+    return json({
+      isValid: true,
+      mobilePhone: legacy.data.mobilePhone ? String(legacy.data.mobilePhone) : undefined,
+      sessionCookie: String(legacy.data.sessionCookie),
+    });
+  }
+  if (legacy.response?.ok && (legacy.data?.isValid === false || legacy.data?.error)) {
+    return json({ isValid: false, error: String(legacy.data.error || 'User not found in MyIDF') });
+  }
+
+  const v1 = await callMyIdf('/api/v1/idf/users', body, apiKey, baseUrl, origin);
   if (v1.response?.ok && v1.data?.mobilePhone && v1.data?.sessionCookie) {
     return json({
       isValid: true,
@@ -90,17 +113,7 @@ async function sendCode(cleanId: string, apiKey: string, baseUrl: string, origin
   if (v1.response?.ok && (v1.data?.isValid === false || v1.data?.error)) {
     return json({ isValid: false, error: String(v1.data.error || 'User not found in MyIDF') });
   }
-  if (v1.timedOut) return upstreamError(v1, 'MyIDF timeout');
-
-  const legacy = await callMyIdf('/api/idf/users', { idNumber: cleanId }, apiKey, baseUrl, origin);
-  if (legacy.response?.ok && legacy.data?.sessionCookie) {
-    return json({
-      isValid: true,
-      mobilePhone: legacy.data.mobilePhone ? String(legacy.data.mobilePhone) : undefined,
-      sessionCookie: String(legacy.data.sessionCookie),
-    });
-  }
-  return upstreamError(legacy, String(v1.data?.error || 'MyIDF users failed'));
+  return upstreamError(legacy.timedOut ? legacy : (v1.response ? v1 : legacy), String(legacy.data?.error || v1.data?.error || 'MyIDF users failed'));
 }
 
 // Step 2: validate the SMS code using the session cookie from step 1.
@@ -116,15 +129,6 @@ async function validateCode(
   if (!isValidAuthCode(code)) return json({ isValid: false, error: 'קוד אימות לא תקין' });
 
   const body = { idNumber: cleanId, code, sessionCookie };
-  const v1 = await callMyIdf('/api/v1/idf/validate-code', body, apiKey, baseUrl, origin);
-  if (v1.response?.ok && v1.data) {
-    if (v1.data.isValid === true) {
-      return json({ isValid: true, token: v1.data.token ? String(v1.data.token) : undefined });
-    }
-    return json({ isValid: false, error: String(v1.data.error || 'קוד האימות שגוי או שפג תוקפו') });
-  }
-  if (v1.timedOut) return upstreamError(v1, 'MyIDF timeout');
-
   const legacy = await callMyIdf('/api/idf/validate-code', body, apiKey, baseUrl, origin);
   if (legacy.response?.ok && legacy.data) {
     if (legacy.data.isValid === true) {
@@ -132,7 +136,15 @@ async function validateCode(
     }
     return json({ isValid: false, error: String(legacy.data.error || 'קוד האימות שגוי או שפג תוקפו') });
   }
-  return upstreamError(legacy, String(v1.data?.error || 'MyIDF validate failed'));
+
+  const v1 = await callMyIdf('/api/v1/idf/validate-code', body, apiKey, baseUrl, origin);
+  if (v1.response?.ok && v1.data) {
+    if (v1.data.isValid === true) {
+      return json({ isValid: true, token: v1.data.token ? String(v1.data.token) : undefined });
+    }
+    return json({ isValid: false, error: String(v1.data.error || 'קוד האימות שגוי או שפג תוקפו') });
+  }
+  return upstreamError(legacy.timedOut ? legacy : (v1.response ? v1 : legacy), String(legacy.data?.error || v1.data?.error || 'MyIDF validate failed'));
 }
 
 export async function POST(req: Request) {
@@ -145,6 +157,12 @@ export async function POST(req: Request) {
     if (!isValidIsraeliID(cleanId)) return json({ isValid: false, error: 'מספר תעודת זהות לא תקין' });
 
     const { apiKey, baseUrl, origin } = myIdfConfig();
+    if (!isValidHttpUrl(baseUrl)) {
+      return json({ isValid: false, error: 'הגדרת MYIDF_BASE_URL לא תקינה — בדוק את .env.local' }, 500);
+    }
+    if (!apiKey || apiKey === '[SENSITIVE]') {
+      return json({ isValid: false, error: 'חסר MYIDF_API_KEY תקין — בדוק את .env.local' }, 500);
+    }
     if (code) return validateCode(cleanId, code.trim(), String(sessionCookie || ''), apiKey, baseUrl, origin);
     return sendCode(cleanId, apiKey, baseUrl, origin);
   } catch (e) {

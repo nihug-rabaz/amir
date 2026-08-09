@@ -4,12 +4,20 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
 import { ROLE_LABELS } from '@/lib/catalog';
-import { isValidAuthCode } from '@/lib/israeli-id';
+import { isValidAuthCode, normalizeIsraeliID } from '@/lib/israeli-id';
 import type { User } from '@/lib/types';
 import { BrandMark } from '@/components/BrandMark';
 import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 type Step = 'id' | 'code';
+
+function idsMatch(a: string, b: string) {
+  const left = normalizeIsraeliID(a);
+  const right = normalizeIsraeliID(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  return left.replace(/^0+/, '') === right.replace(/^0+/, '');
+}
 
 export default function LoginPage() {
   const { signIn, user } = useAuth();
@@ -30,7 +38,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/users')
+    fetch('/api/users', { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -51,8 +59,21 @@ export default function LoginPage() {
     }, 220);
   }
 
-  function findUser(idNumber: string): User | undefined {
-    return users.find((x) => x.personalId === idNumber || x.personalId === idNumber.replace(/^0+/, ''));
+  function findUserIn(list: User[], idNumber: string): User | undefined {
+    return list.find((x) => idsMatch(x.personalId, idNumber));
+  }
+
+  // Reloads active users from the API when the in-memory list misses the ID after MyIDF success.
+  async function resolveUser(idNumber: string): Promise<User | undefined> {
+    const existing = findUserIn(users, idNumber);
+    if (existing) return existing;
+    const r = await fetch('/api/users', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const list = ((j.users || []) as User[]).filter((u) => u.active);
+    setUsers(list);
+    setLoadError(null);
+    return findUserIn(list, idNumber);
   }
 
   async function start() {
@@ -62,9 +83,13 @@ export default function LoginPage() {
     if (method === 'card') {
       if (loading) return toastRef.current.danger('טוען', 'רשימת המשתמשים עדיין נטענת');
       if (loadError) return toastRef.current.danger('שגיאה', loadError);
-      const u = findUser(idNumber);
-      if (!u) return toastRef.current.danger('משתמש לא נמצא', 'אין משתמש פעיל עם מספר זהות זה');
-      pick(u);
+      try {
+        const u = await resolveUser(idNumber);
+        if (!u) return toastRef.current.danger('משתמש לא נמצא', 'אין משתמש פעיל עם מספר זהות זה');
+        pick(u);
+      } catch {
+        toastRef.current.danger('שגיאה', 'לא ניתן לטעון משתמשים. נסה לרענן.');
+      }
       return;
     }
 
@@ -112,11 +137,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (loading) {
-        toastRef.current.danger('טוען', 'רשימת המשתמשים עדיין נטענת — נסה שוב בעוד רגע');
-        return;
-      }
-      const u = findUser(idNumber);
+      const u = await resolveUser(idNumber);
       if (!u) {
         toastRef.current.danger('אין הרשאה באמי״ר', 'המשתמש אומת ב-MyIDF אך לא מוגדר כמשתמש פעיל במערכת');
         return;

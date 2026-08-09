@@ -2,9 +2,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { PWA_INSTALL_LABEL, usePwaInstall } from '@/lib/pwa-install';
 import {
   IconBoxes, IconBuilding, IconChart, IconAlert, IconScale,
-  IconHistory, IconX, IconShield,
+  IconHistory, IconX, IconShield, IconDownload,
 } from './Icon';
 import { BrandMark } from './BrandMark';
 import { DeveloperCredit } from './DeveloperCredit';
@@ -34,7 +35,13 @@ interface Props {
 export function Sidebar({ onNavigate }: Props) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { canInstall, openPopup } = usePwaInstall();
   const items = NAV.filter((n) => !n.adminOnly || user?.role === 'admin');
+
+  const onInstallClick = () => {
+    openPopup();
+    onNavigate?.();
+  };
 
   return (
     <div
@@ -82,6 +89,17 @@ export function Sidebar({ onNavigate }: Props) {
             </Link>
           );
         })}
+
+        {canInstall && (
+          <button
+            type="button"
+            onClick={onInstallClick}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium border border-transparent text-slate-300 hover:bg-white/5 hover:text-white transition duration-200 text-right"
+          >
+            <span><IconDownload /></span>
+            <span>{PWA_INSTALL_LABEL}</span>
+          </button>
+        )}
       </nav>
 
       <div className="mt-auto pt-4 border-t border-white/10 text-xs text-slate-400 space-y-3">

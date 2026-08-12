@@ -146,6 +146,7 @@ export default function DashboardPage() {
           <EmptyState
             title="אין מתקנים בתחום האחריות"
             subtitle="כשיוגדרו מתקנים בהרשאות שלך, המדדים והגרפים יופיעו כאן"
+            imageSrc="/ui/empty-facilities.jpg"
             action={<Link href="/facilities/new" className="btn btn-primary"><IconBuilding /> הוספת מתקן</Link>}
           />
         </div>

@@ -89,7 +89,7 @@ export default function GapsPage() {
 
       {loading ? (
         <div className="card card-padded">
-          <EmptyState title="טוען פערים…" imageSrc="/ui/empty-inventory.jpg" compact />
+          <EmptyState title="טוען פערים…" compact />
         </div>
       ) : rows.length === 0 ? (
         <div className="card">

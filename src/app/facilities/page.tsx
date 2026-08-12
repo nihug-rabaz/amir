@@ -139,6 +139,7 @@ export default function FacilitiesPage() {
           <EmptyState
             title="אין מתקנים להצגה"
             subtitle="לא נמצאו מתקנים בתחום ההרשאות שלך"
+            imageSrc="/ui/empty-facilities.jpg"
             action={<Link href="/facilities/new" className="btn btn-primary"><IconPlus /> הוספת מתקן</Link>}
           />
         </div>

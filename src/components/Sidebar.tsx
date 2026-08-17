@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { PWA_INSTALL_LABEL, usePwaInstall } from '@/lib/pwa-install';
 import {
   IconBoxes, IconBuilding, IconChart, IconAlert, IconScale,
-  IconHistory, IconX, IconShield, IconDownload,
+  IconHistory, IconX, IconShield, IconDownload, IconHeadset,
 } from './Icon';
 import { BrandMark } from './BrandMark';
 import { DeveloperCredit } from './DeveloperCredit';
@@ -100,6 +100,16 @@ export function Sidebar({ onNavigate }: Props) {
             <span>{PWA_INSTALL_LABEL}</span>
           </button>
         )}
+        <a
+          href="https://chat.whatsapp.com/FhbpnprljpqC0Ke9rXyjCP?s=cl&p=a&ilr=4"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onNavigate}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium border border-transparent text-slate-300 hover:bg-white/5 hover:text-white transition duration-200"
+        >
+          <span><IconHeadset /></span>
+          <span>תמיכה טכנית</span>
+        </a>
       </nav>
 
       <div className="mt-auto pt-4 border-t border-white/10 text-xs text-slate-400 space-y-3">

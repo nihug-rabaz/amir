@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
+import { useOffline } from '@/lib/offline/context';
+import { offlineJson } from '@/lib/offline/api';
 import { canManageStandards } from '@/lib/permissions';
 import type { InventoryItem, StandardTier } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
@@ -12,6 +14,7 @@ import { IconCheck, IconScale } from '@/components/Icon';
 export default function StandardsPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const { refreshPending } = useOffline();
   const canEdit = canManageStandards(user);
   const itemQuery = (useSearchParams().get('q') || '').trim().toLowerCase();
 
@@ -24,14 +27,16 @@ export default function StandardsPage() {
   const [original, setOriginal] = useState<Record<string, Record<string, number>>>({});
 
   useEffect(() => {
-    fetch('/api/standards').then((r) => r.json()).then((j) => {
-      setTiers(j.tiers || []);
-      setItems(j.items || []);
-      const std = j.standards || {};
-      setStandards(std);
-      setOriginal(JSON.parse(JSON.stringify(std)));
-    });
-  }, []);
+    offlineJson<{ tiers?: StandardTier[]; items?: InventoryItem[]; standards?: Record<string, Record<string, number>> }>('/api/standards')
+      .then((j) => {
+        setTiers(j.data.tiers || []);
+        setItems(j.data.items || []);
+        const std = j.data.standards || {};
+        setStandards(std);
+        setOriginal(JSON.parse(JSON.stringify(std)));
+      })
+      .catch((e) => toast.danger('שגיאה', (e as Error).message));
+  }, [toast]);
 
   const filteredItems = useMemo(
     () => items.filter((it) =>
@@ -57,13 +62,16 @@ export default function StandardsPage() {
           if (cur !== old) changes.push({ tierId: t.id, itemId: it.id, qty: cur });
         }
       }
-      const r = await fetch('/api/standards', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      const result = await offlineJson<{ error?: string }>('/api/standards', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ changes, actor: user }),
+        offlineLabel: `עדכון תקנים · ${changes.length} ערכים`,
       });
-      const j = await r.json();
-      if (j.error) throw new Error(j.error);
-      toast.success('תקנים נשמרו', `עודכנו ${changes.length} ערכים`);
+      if (result.data.error) throw new Error(result.data.error);
+      await refreshPending();
+      if (result.queued) toast.warning('נשמר מקומית', 'התקנים יישלחו לשרת כשיחזור החיבור');
+      else toast.success('תקנים נשמרו', `עודכנו ${changes.length} ערכים`);
       setOriginal(JSON.parse(JSON.stringify(standards)));
       setDirty(false);
     } catch (e) {

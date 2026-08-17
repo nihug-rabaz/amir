@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { FullscreenProvider, useFullscreen } from '@/lib/fullscreen-context';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { OfflineIndicator } from './OfflineIndicator';
 import { usePathname } from 'next/navigation';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -76,6 +77,7 @@ function ShellLayout({ children }: { children: ReactNode }) {
 
       <div className="flex flex-col min-w-0 min-h-screen lg:mr-[260px]">
         <Topbar onMenuClick={() => setDrawerOpen(true)} />
+        <OfflineIndicator />
         <main className="p-3 sm:p-4 md:p-6 flex-1 min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>

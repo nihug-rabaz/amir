@@ -20,6 +20,8 @@ export const IconPlus     = (p: IconProps) => <svg {...base(p)}><path d="M12 5v1
 export const IconEdit     = (p: IconProps) => <svg {...base(p)}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"/></svg>;
 export const IconEye      = (p: IconProps) => <svg {...base(p)}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>;
 export const IconDownload = (p: IconProps) => <svg {...base(p)}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>;
+export const IconHeadset  = (p: IconProps) => <svg {...base(p)}><path d="M4 14v-4a8 8 0 0 1 16 0v4"/><path d="M18 19c0 1.7-1.3 3-3 3h-2"/><rect x="2" y="12" width="4" height="7" rx="2"/><rect x="18" y="12" width="4" height="7" rx="2"/></svg>;
+export const IconUpload   = (p: IconProps) => <svg {...base(p)}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>;
 export const IconBack     = (p: IconProps) => <svg {...base(p)}><path d="M5 12h14M12 5l7 7-7 7"/></svg>;
 export const IconCheck    = (p: IconProps) => <svg {...base(p)}><path d="M20 6 9 17l-5-5"/></svg>;
 export const IconX        = (p: IconProps) => <svg {...base(p)}><path d="M18 6 6 18M6 6l12 12"/></svg>;

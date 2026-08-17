@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { assignedUsersFor, filterFacilities } from '@/lib/permissions';
+import { useToast } from '@/lib/toast';
+import { offlineJson } from '@/lib/offline/api';
+import { assignedUsersFor, canCreateFacility, filterFacilities } from '@/lib/permissions';
 import type { FacilityWithCompliance, User } from '@/lib/types';
 import { CAMP_TYPES, COMMANDS, FACILITY_STATUS, ROLE_LABELS } from '@/lib/catalog';
 import { fmtDate, fmtNumber } from '@/lib/format';
@@ -16,6 +18,7 @@ import { EmptyState } from '@/components/EmptyState';
 export default function FacilitiesPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const initialSearch = useSearchParams().get('q') || '';
   const [facilities, setFacilities] = useState<FacilityWithCompliance[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -23,15 +26,16 @@ export default function FacilitiesPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/facilities?with=compliance&summary=1').then((r) => r.json()),
-      fetch('/api/users').then((r) => r.json()),
+      offlineJson<{ facilities?: FacilityWithCompliance[] }>('/api/facilities?with=compliance&summary=1'),
+      offlineJson<{ users?: User[] }>('/api/users'),
     ])
       .then(([f, u]) => {
-        setFacilities(f.facilities || []);
-        setUsers(u.users || []);
+        setFacilities(f.data.facilities || []);
+        setUsers(u.data.users || []);
+        if (f.fromCache || u.fromCache) toast.warning('מצב לא מקוון', 'מוצגים נתונים שמורים מקומית');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [toast]);
 
   const rows = useMemo(() => filterFacilities(user, facilities).map((f) => {
     const rabbis = assignedUsersFor(f, users);
@@ -125,7 +129,9 @@ export default function FacilitiesPage() {
         actions={(
           <>
             <button onClick={exportCsv} className="btn btn-on-dark"><IconDownload /> ייצוא לאקסל</button>
-            <Link href="/facilities/new" className="btn btn-accent"><IconPlus /> הוספת מתקן</Link>
+            {canCreateFacility(user) && (
+              <Link href="/facilities/new" className="btn btn-accent"><IconPlus /> הוספת מתקן</Link>
+            )}
           </>
         )}
       />
@@ -140,7 +146,7 @@ export default function FacilitiesPage() {
             title="אין מתקנים להצגה"
             subtitle="לא נמצאו מתקנים בתחום ההרשאות שלך"
             imageSrc="/ui/empty-facilities.jpg"
-            action={<Link href="/facilities/new" className="btn btn-primary"><IconPlus /> הוספת מתקן</Link>}
+            action={canCreateFacility(user) ? <Link href="/facilities/new" className="btn btn-primary"><IconPlus /> הוספת מתקן</Link> : undefined}
           />
         </div>
       ) : (

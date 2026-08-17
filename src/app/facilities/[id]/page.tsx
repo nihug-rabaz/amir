@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/lib/toast';
+import { offlineJson } from '@/lib/offline/api';
 import type { AuditEntry, Compliance, Facility } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
 import { fmtDate, fmtDateTime, fmtNumber } from '@/lib/format';
@@ -13,6 +15,7 @@ type Tab = 'overview' | 'inventory' | 'infra' | 'history';
 export default function FacilityDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [facility, setFacility] = useState<Facility | null>(null);
   const [compliance, setCompliance] = useState<Compliance | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
@@ -20,16 +23,16 @@ export default function FacilityDetail() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/facilities/${id}`)
-      .then((r) => r.json())
+    offlineJson<{ facility?: Facility; compliance?: Compliance; audit?: AuditEntry[]; error?: string }>(`/api/facilities/${id}`)
       .then((j) => {
-        if (j.error) { setError(j.error); return; }
-        setFacility(j.facility);
-        setCompliance(j.compliance);
-        setAudit(j.audit || []);
+        if (j.data.error) { setError(j.data.error); return; }
+        setFacility(j.data.facility || null);
+        setCompliance(j.data.compliance || null);
+        setAudit(j.data.audit || []);
+        if (j.fromCache) toast.warning('מצב לא מקוון', 'מוצגים נתונים שמורים מקומית');
       })
       .catch((e) => setError(String(e)));
-  }, [id]);
+  }, [id, toast]);
 
   if (error) return <div className="card card-padded text-bad">שגיאה: {error}</div>;
   if (!facility || !compliance) return <div className="card card-padded text-slate-500">טוען…</div>;

@@ -1,10 +1,11 @@
-const CACHE_NAME = 'amir-pwa-v1';
+const CACHE_NAME = 'amir-pwa-v3';
 const PRECACHE_URLS = [
   '/',
   '/dashboard',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/brand/mark.jpg',
+  '/icons/icon-192-v3.png',
+  '/icons/icon-512-v3.png',
+  '/apple-touch-icon.png',
+  '/brand/mark-icon.png',
   '/favicon.jpg',
 ];
 

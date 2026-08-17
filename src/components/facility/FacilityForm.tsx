@@ -8,6 +8,8 @@ import {
 import { divisionOptions, brigadeOptions, battalionOptions } from '@/lib/scopeOptions';
 import { fmtNumber } from '@/lib/format';
 import { useToast } from '@/lib/toast';
+import { useOffline } from '@/lib/offline/context';
+import { offlineJson } from '@/lib/offline/api';
 import { IconBack, IconBoxes, IconCheck } from '@/components/Icon';
 import { GapStatusBadge } from '@/components/StatusPill';
 import { Field, NumField, Check } from './fieldControls';
@@ -84,6 +86,7 @@ function mapInitial(initial?: Facility | null): FormData {
 export function FacilityForm({ mode, initial, actor }: Props) {
   const router = useRouter();
   const toast = useToast();
+  const { refreshPending } = useOffline();
   const [tab, setTab] = useState<Tab>('details');
   const [form, setForm] = useState<FormData>(() => mapInitial(initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,28 +108,25 @@ export function FacilityForm({ mode, initial, actor }: Props) {
   }, [tiers, form.maxCapacity]);
 
   useEffect(() => {
-    fetch('/api/standards')
-      .then((r) => r.json())
+    offlineJson<{ items?: InventoryItem[]; tiers?: StandardTier[]; standards?: Record<string, Record<string, number>> }>('/api/standards')
       .then((j) => {
-        setItems(j.items || []);
-        setTiers(j.tiers || []);
-        setStandards(j.standards || {});
+        setItems(j.data.items || []);
+        setTiers(j.data.tiers || []);
+        setStandards(j.data.standards || {});
       })
       .catch(() => toast.danger('שגיאה', 'לא ניתן לטעון תקנים'));
   }, [toast]);
 
   useEffect(() => {
-    fetch('/api/facilities')
-      .then((r) => r.json())
-      .then((j) => setFacilities(j.facilities || []))
+    offlineJson<{ facilities?: Facility[] }>('/api/facilities')
+      .then((j) => setFacilities(j.data.facilities || []))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (mode !== 'edit' || !initial?.id) return;
-    fetch(`/api/facilities/${initial.id}/inventory`)
-      .then((r) => r.json())
-      .then((j) => setInventory(j.inventory || {}))
+    offlineJson<{ inventory?: Record<string, number> }>(`/api/facilities/${initial.id}/inventory`)
+      .then((j) => setInventory(j.data.inventory || {}))
       .catch(() => toast.danger('שגיאה', 'לא ניתן לטעון מלאי'));
   }, [mode, initial, toast]);
 
@@ -153,6 +153,7 @@ export function FacilityForm({ mode, initial, actor }: Props) {
   async function save() {
     if (!validate()) { setTab('details'); return; }
     setSaving(true);
+    let queued = false;
     try {
       const payload = {
         name: form.name,
@@ -172,35 +173,49 @@ export function FacilityForm({ mode, initial, actor }: Props) {
 
       let facilityId: string;
       if (mode === 'new') {
-        const r = await fetch('/api/facilities', {
+        const created = await offlineJson<{ facility?: Facility; error?: string }>('/api/facilities', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({ facility: payload, actor }),
+          offlineLabel: `יצירת מתקן · ${form.name}`,
         });
-        const j = await r.json();
-        if (j.error) throw new Error(j.error);
-        facilityId = j.facility.id;
+        if (created.data.error) throw new Error(created.data.error);
+        queued = created.queued;
+        facilityId = created.data.facility?.id || initial?.id || '';
+        if (!facilityId && queued) {
+          await refreshPending();
+          toast.warning('נשמר מקומית', 'המתקן ייווצר בשרת כשיחזור החיבור');
+          return;
+        }
       } else {
-        const r = await fetch(`/api/facilities/${initial!.id}`, {
+        const updated = await offlineJson<{ facility?: Facility; error?: string }>(`/api/facilities/${initial!.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({ facility: payload, actor }),
+          offlineLabel: `עדכון מתקן · ${form.name}`,
         });
-        const j = await r.json();
-        if (j.error) throw new Error(j.error);
+        if (updated.data.error) throw new Error(updated.data.error);
+        queued = updated.queued;
         facilityId = initial!.id;
       }
 
-      if (Object.keys(inventory).length > 0) {
-        const r = await fetch(`/api/facilities/${facilityId}/inventory`, {
+      if (Object.keys(inventory).length > 0 && facilityId) {
+        const inv = await offlineJson<{ error?: string }>(`/api/facilities/${facilityId}/inventory`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({ inventory, actor }),
+          offlineLabel: `מלאי מתקן · ${form.name}`,
         });
-        const j = await r.json();
-        if (j.error) throw new Error(j.error);
+        if (inv.data.error) throw new Error(inv.data.error);
+        queued = queued || inv.queued;
       }
 
+      await refreshPending();
+      if (queued) {
+        toast.warning('נשמר מקומית', 'השינויים יישלחו לשרת כשיחזור החיבור');
+        if (mode === 'edit' && facilityId) router.push(`/facilities/${facilityId}`);
+        return;
+      }
       toast.success('המתקן נשמר', mode === 'new' ? 'מתקן חדש נוצר בהצלחה' : 'פרטי המתקן עודכנו');
       router.push(`/facilities/${facilityId}`);
     } catch (e) {

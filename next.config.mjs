@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     serverActions: { bodySizeLimit: '2mb' },
+    serverComponentsExternalPackages: ['exceljs'],
   },
 };
 

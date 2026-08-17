@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { offlineJson } from '@/lib/offline/api';
 import { filterFacilities } from '@/lib/permissions';
 import type { Facility, InventoryItem } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
@@ -48,11 +49,11 @@ export function GlobalSearch() {
     if (loaded) return;
     setLoaded(true);
     Promise.all([
-      fetch('/api/facilities').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/standards').then((r) => r.json()).catch(() => ({})),
+      offlineJson<{ facilities?: Facility[] }>('/api/facilities').catch(() => ({ data: {} as { facilities?: Facility[] }, fromCache: false, queued: false })),
+      offlineJson<{ items?: InventoryItem[] }>('/api/standards').catch(() => ({ data: {} as { items?: InventoryItem[] }, fromCache: false, queued: false })),
     ]).then(([f, s]) => {
-      setFacilities(f.facilities || []);
-      setItems(s.items || []);
+      setFacilities(f.data.facilities || []);
+      setItems(s.data.items || []);
     });
   }
 

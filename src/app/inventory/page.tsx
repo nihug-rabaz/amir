@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast';
+import { useOffline } from '@/lib/offline/context';
+import { offlineJson } from '@/lib/offline/api';
 import { filterFacilities } from '@/lib/permissions';
 import type { Facility, FacilityFields, InventoryItem, StandardTier } from '@/lib/types';
 import { ITEM_CATEGORIES } from '@/lib/catalog';
@@ -16,6 +18,7 @@ import { IconBoxes, IconCheck, IconX } from '@/components/Icon';
 export default function InventoryPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const { refreshPending } = useOffline();
   const params = useSearchParams();
   const initialId = params.get('facility');
 
@@ -34,15 +37,16 @@ export default function InventoryPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/facilities').then((r) => r.json()),
-      fetch('/api/standards').then((r) => r.json()),
+      offlineJson<{ facilities?: Facility[] }>('/api/facilities'),
+      offlineJson<{ items?: InventoryItem[]; tiers?: StandardTier[]; standards?: Record<string, Record<string, number>> }>('/api/standards'),
     ]).then(([f, s]) => {
-      setFacilities(f.facilities || []);
-      setItems(s.items || []);
-      setTiers(s.tiers || []);
-      setStandards(s.standards || {});
-    });
-  }, []);
+      setFacilities(f.data.facilities || []);
+      setItems(s.data.items || []);
+      setTiers(s.data.tiers || []);
+      setStandards(s.data.standards || {});
+      if (f.fromCache || s.fromCache) toast.warning('מצב לא מקוון', 'מוצגים נתונים שמורים מקומית');
+    }).catch((e) => toast.danger('שגיאה', (e as Error).message));
+  }, [toast]);
 
   const visible = useMemo(() => filterFacilities(user, facilities).filter((f) => f.active), [user, facilities]);
   const selected: Facility | null = useMemo(() => visible.find((f) => f.id === selectedId) || null, [visible, selectedId]);
@@ -53,7 +57,9 @@ export default function InventoryPage() {
 
   useEffect(() => {
     if (!selectedId) { setDraft({}); return; }
-    fetch(`/api/facilities/${selectedId}/inventory`).then((r) => r.json()).then((j) => setDraft(j.inventory || {}));
+    offlineJson<{ inventory?: Record<string, number> }>(`/api/facilities/${selectedId}/inventory`)
+      .then((j) => setDraft(j.data.inventory || {}))
+      .catch(() => setDraft({}));
   }, [selectedId]);
 
   useEffect(() => {
@@ -95,27 +101,39 @@ export default function InventoryPage() {
   async function save() {
     if (!selectedId) return;
     setSaving(true);
+    let queued = false;
     try {
-      const r = await fetch(`/api/facilities/${selectedId}/inventory`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inventory: draft, actor: user }),
-      });
-      const j = await r.json();
-      if (j.error) throw new Error(j.error);
+      const inv = await offlineJson<{ inventory?: Record<string, number>; error?: string }>(
+        `/api/facilities/${selectedId}/inventory`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ inventory: draft, actor: user }),
+          offlineLabel: `עדכון מלאי · ${selected?.name || selectedId}`,
+        },
+      );
+      if (inv.data.error) throw new Error(inv.data.error);
+      queued = inv.queued;
 
       if (fieldsDirty) {
-        const rf = await fetch(`/api/facilities/${selectedId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ facility: { fields: fieldsDraft }, actor: user }),
-        });
-        const jf = await rf.json();
-        if (jf.error) throw new Error(jf.error);
+        const fac = await offlineJson<{ facility?: Facility; error?: string }>(
+          `/api/facilities/${selectedId}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({ facility: { fields: fieldsDraft }, actor: user }),
+            offlineLabel: `עדכון שדות · ${selected?.name || selectedId}`,
+          },
+        );
+        if (fac.data.error) throw new Error(fac.data.error);
+        queued = queued || fac.queued;
         setFacilities((prev) => prev.map((f) => (f.id === selectedId ? { ...f, fields: { ...fieldsDraft } } : f)));
         setFieldsDirty(false);
       }
-      toast.success('הנתונים נשמרו', 'המלאי והפרטים עודכנו ותועדו ביומן');
+
+      await refreshPending();
+      if (queued) toast.warning('נשמר מקומית', 'השינויים יישלחו לשרת כשיחזור החיבור');
+      else toast.success('הנתונים נשמרו', 'המלאי והפרטים עודכנו ותועדו ביומן');
     } catch (e) {
       toast.danger('שגיאה בשמירה', (e as Error).message);
     } finally {

@@ -11,6 +11,7 @@ import type { FacilityWithCompliance, User } from '@/lib/types';
 import { Kpi } from '@/components/Kpi';
 import { ComplianceCell, StatusPill } from '@/components/StatusPill';
 import { UserFormModal } from '@/components/admin/UserFormModal';
+import { UserExcelActions } from '@/components/admin/UserExcelActions';
 import {
   IconAlert, IconBoxes, IconBuilding, IconCheck,
   IconEdit, IconEye, IconPlus, IconScale, IconSearch, IconShield, IconUsers, IconX,
@@ -88,6 +89,10 @@ export default function AdminOverviewPage() {
     toast.success(editingUser ? 'המשתמש עודכן' : 'המשתמש נוסף', saved.name);
   }
 
+  function handleImported() {
+    reloadUsers();
+  }
+
   async function handleDelete(u: User) {
     if (!window.confirm(`למחוק את המשתמש "${u.name}"? פעולה זו אינה הפיכה.`)) return;
     try {
@@ -143,7 +148,11 @@ export default function AdminOverviewPage() {
             תצוגה מלאה של כל המתקנים, המשתמשים המשויכים והפערים — שלום {user?.name}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <UserExcelActions
+            onImported={handleImported}
+            onError={(m) => toast.danger('שגיאה באקסל', m)}
+          />
           <button onClick={openAddUser} className="btn btn-primary">
             <IconPlus size={16} /> הוספת משתמש
           </button>

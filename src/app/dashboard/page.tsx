@@ -1,8 +1,10 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast';
+import { offlineJson } from '@/lib/offline/api';
 import { useFullscreen } from '@/lib/fullscreen-context';
-import { filterFacilities } from '@/lib/permissions';
+import { canCreateFacility, filterFacilities } from '@/lib/permissions';
 import type { FacilityWithCompliance } from '@/lib/types';
 import { COMMANDS, ITEM_CATEGORIES, ROLE_LABELS } from '@/lib/catalog';
 import { fmtNumber } from '@/lib/format';
@@ -28,15 +30,18 @@ const PIE_COLORS = ['#16a34a', '#ea7c1d', '#94a3b8', '#2563eb', '#7c3aed', '#cbd
 export default function DashboardPage() {
   const { user } = useAuth();
   const { fullscreen, setFullscreen } = useFullscreen();
+  const toast = useToast();
   const [data, setData] = useState<FacilityWithCompliance[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/facilities?with=compliance')
-      .then((r) => r.json())
-      .then((j) => setData(j.facilities || []))
+    offlineJson<{ facilities?: FacilityWithCompliance[] }>('/api/facilities?with=compliance')
+      .then((j) => {
+        setData(j.data.facilities || []);
+        if (j.fromCache) toast.warning('מצב לא מקוון', 'מוצגים נתונים שמורים מקומית');
+      })
       .catch((e) => setErr(String(e)));
-  }, []);
+  }, [toast]);
 
   const visible = useMemo(() => filterFacilities(user, data || []), [user, data]);
 
@@ -136,7 +141,9 @@ export default function DashboardPage() {
               <button onClick={() => setFullscreen(true)} className="btn btn-on-dark"><IconExpand /> תצוגה מלאה</button>
             )}
             <Link href="/facilities" className="btn btn-on-dark"><IconBuilding /> מתקנים</Link>
-            <Link href="/facilities/new" className="btn btn-accent"><IconBuilding /> הוספת מתקן</Link>
+            {canCreateFacility(user) && (
+              <Link href="/facilities/new" className="btn btn-accent"><IconBuilding /> הוספת מתקן</Link>
+            )}
           </>
         )}
       />
@@ -147,7 +154,7 @@ export default function DashboardPage() {
             title="אין מתקנים בתחום האחריות"
             subtitle="כשיוגדרו מתקנים בהרשאות שלך, המדדים והגרפים יופיעו כאן"
             imageSrc="/ui/empty-facilities.jpg"
-            action={<Link href="/facilities/new" className="btn btn-primary"><IconBuilding /> הוספת מתקן</Link>}
+            action={canCreateFacility(user) ? <Link href="/facilities/new" className="btn btn-primary"><IconBuilding /> הוספת מתקן</Link> : undefined}
           />
         </div>
       )}

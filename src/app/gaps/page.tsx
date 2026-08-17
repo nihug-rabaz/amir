@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast';
+import { offlineJson } from '@/lib/offline/api';
 import { filterFacilities } from '@/lib/permissions';
 import type { FacilityWithCompliance } from '@/lib/types';
 import { COMMANDS, ITEM_CATEGORIES } from '@/lib/catalog';
@@ -16,15 +18,18 @@ import { EmptyState } from '@/components/EmptyState';
 export default function GapsPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [facilities, setFacilities] = useState<FacilityWithCompliance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/facilities?with=compliance')
-      .then((r) => r.json())
-      .then((j) => setFacilities(j.facilities || []))
+    offlineJson<{ facilities?: FacilityWithCompliance[] }>('/api/facilities?with=compliance')
+      .then((j) => {
+        setFacilities(j.data.facilities || []);
+        if (j.fromCache) toast.warning('מצב לא מקוון', 'מוצגים נתונים שמורים מקומית');
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [toast]);
 
   const rows = useMemo(() => {
     const out: Array<{

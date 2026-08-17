@@ -24,8 +24,7 @@ export function canEditFacility(user: User | null, facility: Facility): boolean 
 }
 
 export function canCreateFacility(user: User | null): boolean {
-  if (!user) return false;
-  return user.role === 'admin' || user.role === 'unit_manager';
+  return user?.role === 'admin';
 }
 
 export function canManageUsers(user: User | null): boolean {

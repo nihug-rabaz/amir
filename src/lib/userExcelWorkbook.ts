@@ -40,19 +40,17 @@ function applyList(cell: ExcelJS.Cell, formula: string, allowBlank: boolean) {
   };
 }
 
-function writeLookup(sheet: ExcelJS.Worksheet, col: number, title: string, rows: LabelRange[]) {
+// Write label→address lookup table; returns the range reference for VLOOKUP.
+function writeLookup(sheet: ExcelJS.Worksheet, col: number, title: string, rows: LabelRange[]): string {
   sheet.getCell(1, col).value = title;
-  sheet.getCell(1, col + 1).value = 'טווח';
+  sheet.getCell(1, col + 1).value = 'כתובת';
   rows.forEach((row, i) => {
     sheet.getCell(i + 2, col).value = row.label;
-    sheet.getCell(i + 2, col + 1).value = row.range;
+    sheet.getCell(i + 2, col + 1).value = row.range; // absolute cell address
   });
-}
-
-function lookupRef(col: number, count: number): string {
-  const start = colLetter(col);
-  const end = colLetter(col + 1);
-  return `'${LISTS_SHEET}'!$${start}$2:$${end}$${Math.max(count, 1) + 1}`;
+  const startCol = colLetter(col);
+  const endCol = colLetter(col + 1);
+  return `'${LISTS_SHEET}'!$${startCol}$2:$${endCol}$${Math.max(rows.length, 1) + 1}`;
 }
 
 export class UserExcelWorkbook {
@@ -63,8 +61,8 @@ export class UserExcelWorkbook {
     wb.calcProperties.fullCalcOnLoad = true;
     const data = wb.addWorksheet(DATA_SHEET, { views: [{ rightToLeft: true }] });
     const listsSheet = wb.addWorksheet(LISTS_SHEET, { state: 'hidden' });
-    this.writeLists(wb, listsSheet, cascade);
-    this.writeDataSheet(data, cascade);
+    const resolvedCascade = this.writeLists(listsSheet, cascade);
+    this.writeDataSheet(data, resolvedCascade);
     const buf = await wb.xlsx.writeBuffer();
     return Buffer.from(buf);
   }
@@ -84,37 +82,75 @@ export class UserExcelWorkbook {
     return UserExcelParser.fromMatrix(matrix);
   }
 
-  private static writeLists(wb: ExcelJS.Workbook, sheet: ExcelJS.Worksheet, cascade: UserExcelCascade) {
+  // Writes all lists into the hidden sheet and converts name→address references.
+  // Returns a cascade where every LabelRange.range is a concrete cell-address string
+  // that Excel's INDIRECT() can resolve reliably (no Named Ranges needed).
+  private static writeLists(
+    sheet: ExcelJS.Worksheet,
+    cascade: UserExcelCascade,
+  ): ResolvedCascade {
+    // Col A — roles
     sheet.getCell(1, 1).value = 'תפקיד';
     cascade.roles.forEach((v, i) => { sheet.getCell(i + 2, 1).value = v; });
+    const roleAddr = `'${LISTS_SHEET}'!$A$2:$A$${cascade.roles.length + 1}`;
+
+    // Col B — commands
     sheet.getCell(1, 2).value = 'פיקוד';
     cascade.commands.forEach((v, i) => { sheet.getCell(i + 2, 2).value = v; });
+    const commandAddr = `'${LISTS_SHEET}'!$B$2:$B$${cascade.commands.length + 1}`;
 
-    writeLookup(sheet, 4, 'פיקוד', cascade.commandToDivRange);
-    writeLookup(sheet, 6, 'פיקוד|אוגדה', cascade.pairToBrgRange);
-    writeLookup(sheet, 8, 'פיקוד|אוגדה|חטיבה', cascade.tripleToBtnRange);
+    // Cols C onwards — individual value lists, each list in one column.
+    // Build a map: list.name → absolute cell-address string.
+    let listCol = 3;
+    const nameToAddr = new Map<string, string>();
 
-    let listCol = 11;
-    cascade.namedLists.forEach((list) => {
-      this.writeNamedList(wb, sheet, listCol, list);
+    for (const list of cascade.namedLists) {
+      nameToAddr.set(list.name, this.writeListCol(sheet, listCol, list));
       listCol += 1;
-    });
+    }
+
+    // Resolve LabelRange arrays so .range holds the address, not the list name.
+    function resolve(lr: LabelRange): LabelRange {
+      const addr = nameToAddr.get(lr.range);
+      if (!addr) throw new Error(`Unknown list name: ${lr.range}`);
+      return { label: lr.label, range: addr };
+    }
+
+    const commandToDivRange = cascade.commandToDivRange.map(resolve);
+    const pairToBrgRange = cascade.pairToBrgRange.map(resolve);
+    const tripleToBtnRange = cascade.tripleToBtnRange.map(resolve);
+
+    // Write the three lookup tables (label → address) starting at col C of the lookup area.
+    // Place them after all list columns so they don't collide.
+    const lookupStart = listCol + 1;
+    const cmdMapRef = writeLookup(sheet, lookupStart, 'פיקוד', commandToDivRange);
+    const pairMapRef = writeLookup(sheet, lookupStart + 2, 'פיקוד|אוגדה', pairToBrgRange);
+    const tripleMapRef = writeLookup(sheet, lookupStart + 4, 'פיקוד|אוגדה|חטיבה', tripleToBtnRange);
+
+    return {
+      roles: cascade.roles,
+      commands: cascade.commands,
+      roleAddr,
+      commandAddr,
+      cmdMapRef,
+      pairMapRef,
+      tripleMapRef,
+      allDivAddr: nameToAddr.get(cascade.allDivRange)!,
+      allBrgAddr: nameToAddr.get(cascade.allBrgRange)!,
+      allBtnAddr: nameToAddr.get(cascade.allBtnRange)!,
+    };
   }
 
-  private static writeNamedList(
-    wb: ExcelJS.Workbook,
-    sheet: ExcelJS.Worksheet,
-    col: number,
-    list: NamedValueList,
-  ) {
+  // Writes a single column of values and returns the absolute cell-address string.
+  private static writeListCol(sheet: ExcelJS.Worksheet, col: number, list: NamedValueList): string {
     const letter = colLetter(col);
     sheet.getCell(1, col).value = list.name;
     list.values.forEach((v, i) => { sheet.getCell(i + 2, col).value = v; });
-    const last = Math.max(list.values.length, 1) + 1;
-    wb.definedNames.add(list.name, `'${LISTS_SHEET}'!$${letter}$2:$${letter}$${last}`);
+    const lastRow = Math.max(list.values.length, 1) + 1;
+    return `'${LISTS_SHEET}'!$${letter}$2:$${letter}$${lastRow}`;
   }
 
-  private static writeDataSheet(sheet: ExcelJS.Worksheet, cascade: UserExcelCascade) {
+  private static writeDataSheet(sheet: ExcelJS.Worksheet, rc: ResolvedCascade) {
     const header = sheet.getRow(1);
     USER_EXCEL_HEADERS.forEach((title, i) => {
       const cell = header.getCell(i + 1);
@@ -123,9 +159,9 @@ export class UserExcelWorkbook {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF173A5E' } };
       cell.alignment = { horizontal: 'right', vertical: 'middle' };
     });
-    header.getCell(8).value = 'טווח_אוגדה';
-    header.getCell(9).value = 'טווח_חטיבה';
-    header.getCell(10).value = 'טווח_גדוד';
+    header.getCell(8).value = 'כתובת_אוגדה';
+    header.getCell(9).value = 'כתובת_חטיבה';
+    header.getCell(10).value = 'כתובת_גדוד';
     header.height = 22;
 
     sheet.columns = [
@@ -145,30 +181,34 @@ export class UserExcelWorkbook {
     sheet.getColumn(9).hidden = true;
     sheet.getColumn(10).hidden = true;
 
-    const roleF = `'${LISTS_SHEET}'!$A$2:$A$${cascade.roles.length + 1}`;
-    const commandF = `'${LISTS_SHEET}'!$B$2:$B$${cascade.commands.length + 1}`;
-    const cmdMap = lookupRef(4, cascade.commandToDivRange.length);
-    const pairMap = lookupRef(6, cascade.pairToBrgRange.length);
-    const tripleMap = lookupRef(8, cascade.tripleToBtnRange.length);
     const allCmd = ALL_SCOPE.command.replace(/"/g, '""');
     const allDiv = ALL_SCOPE.division.replace(/"/g, '""');
     const allBrg = ALL_SCOPE.brigade.replace(/"/g, '""');
 
+    // Fallback addresses — written as plain strings so INDIRECT returns them verbatim.
+    const fallbackDiv = rc.allDivAddr;
+    const fallbackBrg = rc.allBrgAddr;
+    const fallbackBtn = rc.allBtnAddr;
+
     for (let r = 2; r <= DATA_ROWS + 1; r++) {
+      // H: address for division dropdown — look up by command value.
       sheet.getCell(r, 8).value = {
-        formula: `IFERROR(VLOOKUP(IF(OR(D${r}="",D${r}="${allCmd}"),"${allCmd}",D${r}),${cmdMap},2,FALSE),"${cascade.allDivRange}")`,
+        formula: `IFERROR(VLOOKUP(IF(OR(D${r}="",D${r}="${allCmd}"),"${allCmd}",D${r}),${rc.cmdMapRef},2,FALSE),"${fallbackDiv}")`,
       };
+      // I: address for brigade dropdown — look up by "command|division".
       sheet.getCell(r, 9).value = {
-        formula: `IFERROR(VLOOKUP(IF(OR(D${r}="",D${r}="${allCmd}"),"${allCmd}",D${r})&"|"&IF(OR(E${r}="",E${r}="${allDiv}"),"${allDiv}",E${r}),${pairMap},2,FALSE),"${cascade.allBrgRange}")`,
+        formula: `IFERROR(VLOOKUP(IF(OR(D${r}="",D${r}="${allCmd}"),"${allCmd}",D${r})&"|"&IF(OR(E${r}="",E${r}="${allDiv}"),"${allDiv}",E${r}),${rc.pairMapRef},2,FALSE),"${fallbackBrg}")`,
       };
+      // J: address for battalion dropdown — look up by "command|division|brigade".
       sheet.getCell(r, 10).value = {
-        formula: `IFERROR(VLOOKUP(IF(OR(D${r}="",D${r}="${allCmd}"),"${allCmd}",D${r})&"|"&IF(OR(E${r}="",E${r}="${allDiv}"),"${allDiv}",E${r})&"|"&IF(OR(F${r}="",F${r}="${allBrg}"),"${allBrg}",F${r}),${tripleMap},2,FALSE),"${cascade.allBtnRange}")`,
+        formula: `IFERROR(VLOOKUP(IF(OR(D${r}="",D${r}="${allCmd}"),"${allCmd}",D${r})&"|"&IF(OR(E${r}="",E${r}="${allDiv}"),"${allDiv}",E${r})&"|"&IF(OR(F${r}="",F${r}="${allBrg}"),"${allBrg}",F${r}),${rc.tripleMapRef},2,FALSE),"${fallbackBtn}")`,
       };
-      applyList(sheet.getCell(r, 3), roleF, false);
-      applyList(sheet.getCell(r, 4), commandF, true);
-      applyList(sheet.getCell(r, 5), `=INDIRECT(H${r})`, true);
-      applyList(sheet.getCell(r, 6), `=INDIRECT(I${r})`, true);
-      applyList(sheet.getCell(r, 7), `=INDIRECT(J${r})`, true);
+      applyList(sheet.getCell(r, 3), rc.roleAddr, false);
+      applyList(sheet.getCell(r, 4), rc.commandAddr, true);
+      // Division / brigade / battalion use INDIRECT of the cell-address computed above.
+      applyList(sheet.getCell(r, 5), `INDIRECT(H${r})`, true);
+      applyList(sheet.getCell(r, 6), `INDIRECT(I${r})`, true);
+      applyList(sheet.getCell(r, 7), `INDIRECT(J${r})`, true);
     }
 
     sheet.autoFilter = {
@@ -177,4 +217,17 @@ export class UserExcelWorkbook {
     };
     sheet.views = [{ rightToLeft: true, state: 'frozen', ySplit: 1 }];
   }
+}
+
+interface ResolvedCascade {
+  roles: string[];
+  commands: string[];
+  roleAddr: string;
+  commandAddr: string;
+  cmdMapRef: string;
+  pairMapRef: string;
+  tripleMapRef: string;
+  allDivAddr: string;
+  allBrgAddr: string;
+  allBtnAddr: string;
 }

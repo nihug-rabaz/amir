@@ -1,4 +1,4 @@
-const CACHE_NAME = 'amir-pwa-v3';
+const CACHE_NAME = 'amir-pwa-v4';
 const PRECACHE_URLS = [
   '/',
   '/dashboard',
